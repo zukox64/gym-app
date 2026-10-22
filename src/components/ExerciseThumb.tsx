@@ -51,7 +51,7 @@ export const ExerciseThumb: React.FC<ThumbProps> = ({ name, muscle, size = 46, m
           className="ex-art-media"
           src={mediaSrc}
           alt={name}
-          loading="eager"
+          loading="lazy"
           decoding="async"
           onError={() => { if (gif && !failedGif && mediaSrc === GIF_BASE + gif) setFailedGif(true); else setFailedPhoto(true); }}
         />

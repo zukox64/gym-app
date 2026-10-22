@@ -1,12 +1,17 @@
 /**
- * فينك الوسائط (A5 هيثبّت المحتوى بدل CDN هنا) — الخريطة ارجنت في مسارات:
- * GIF حركات + صور + عضلات تشريحية + عناصر غواها.
+ * مسارات الوسائط — كلها محلية (public/media/) ومثبّتة بـ commit SHAs
+ * (سكريبت التنزيل: scripts/download-media.mjs / manifest.json فيه sha256 لكل ملف).
+ *
+ * المصادر المثبّتة:
+ *  - الصور: yuhonas/free-exercise-db@f00c92c  (Unlicense)
+ *  - GIFs:  hasaneyldrm/exercises-dataset@7455efa
+ *  - العضلات التشريحية: wger-project/wger@48e02bf  (license BSD-3 / CC)
  */
 
 export interface MuscleArt { f: string; x: number; y: number; z: number; back?: boolean }
 
-/* ===== صور التمارين (حالياً CDN — بتتنقل local في A5) ===== */
-export const PHOTO_BASE = "https://cdn.jsdelivr.net/gh/yuhonas/free-exercise-db@main/exercises/";
+/* المسارات محلية — السكريبت هو اللي بيملأ public/media/ */
+export const PHOTO_BASE = "/media/photos/";
 export const EXERCISE_PHOTOS: Record<string, string> = {
   "Barbell Bench Press": "Barbell_Bench_Press_-_Medium_Grip/0.jpg",
   "Incline Dumbbell Press": "Incline_Dumbbell_Press/0.jpg",
@@ -43,7 +48,7 @@ export const EXERCISE_PHOTOS: Record<string, string> = {
 };
 
 /* ===== حركات التمارين — GIF ===== */
-export const GIF_BASE = "https://cdn.jsdelivr.net/gh/hasaneyldrm/exercises-dataset@main/videos/";
+export const GIF_BASE = "/media/gifs/";
 export const EXERCISE_GIFS: Record<string, string> = {
   "Barbell Bench Press": "0025-EIeI8Vf.gif",
   "Incline Dumbbell Press": "0314-ns0SIbU.gif",
@@ -80,34 +85,34 @@ export const EXERCISE_GIFS: Record<string, string> = {
 };
 
 /* ===== العضلات التشريحية (wger) — كل صورة جسم رمادي + عضلة حمراء بيتعملها zoom ===== */
-export const MUSCLE_IMG_BASE = "https://wger.de/static/images/muscles/";
+export const MUSCLE_IMG_BASE = "/media/muscles/";
 export const BODY_IMG = {
   front: MUSCLE_IMG_BASE + "muscular_system_front.svg",
   back: MUSCLE_IMG_BASE + "muscular_system_back.svg",
 };
 
 export const MUSCLE_IMG: Record<string, MuscleArt> = {
-  Chest: { f: "main/muscle-4.c9fa9a228bc8.svg", x: 50, y: 25, z: 2.6 },
-  Back: { f: "main/muscle-12.6a5de7a0e373.svg", x: 50, y: 34, z: 2.2, back: true },
-  Lats: { f: "main/muscle-12.6a5de7a0e373.svg", x: 50, y: 34, z: 2.2, back: true },
-  "Mid Back": { f: "main/muscle-12.6a5de7a0e373.svg", x: 50, y: 34, z: 2.2, back: true },
-  "Lower Back": { f: "main/muscle-9.b491050a7108.svg", x: 50, y: 30, z: 2.1, back: true },
-  Shoulders: { f: "main/muscle-2.e1e1205a3202.svg", x: 57, y: 24, z: 2.4 },
-  "Side Delt": { f: "main/muscle-2.e1e1205a3202.svg", x: 57, y: 24, z: 2.4 },
-  "Front Delt": { f: "main/muscle-2.e1e1205a3202.svg", x: 57, y: 24, z: 2.4 },
-  "Rear Delt": { f: "main/muscle-2.e1e1205a3202.svg", x: 57, y: 24, z: 2.4, back: true },
-  Biceps: { f: "main/muscle-1.8790f8a0b3b9.svg", x: 60, y: 31, z: 2.4 },
-  Triceps: { f: "main/muscle-5.8a2b934b5486.svg", x: 60, y: 31, z: 2.4, back: true },
-  Forearms: { f: "main/muscle-13.3fd85231b089.svg", x: 59, y: 32, z: 2.5 },
-  Quads: { f: "main/muscle-10.b1445ea1acf6.svg", x: 50, y: 60, z: 2.1 },
-  Hamstrings: { f: "main/muscle-11.54ef31755917.svg", x: 50, y: 66, z: 2.1, back: true },
-  Glutes: { f: "main/muscle-8.fbdfb46f3bc0.svg", x: 50, y: 54, z: 2.0, back: true },
-  Calves: { f: "main/muscle-7.edbd8c381b0c.svg", x: 50, y: 84, z: 1.9, back: true },
-  Abs: { f: "main/muscle-6.592f938fa8c7.svg", x: 50, y: 41, z: 2.3 },
-  "Upper Abs": { f: "main/muscle-6.592f938fa8c7.svg", x: 50, y: 39, z: 2.4 },
-  "Lower Abs": { f: "main/muscle-6.592f938fa8c7.svg", x: 50, y: 44, z: 2.4 },
-  Obliques: { f: "main/muscle-14.153978038d0b.svg", x: 50, y: 40, z: 2.3 },
-  Traps: { f: "main/muscle-9.b491050a7108.svg", x: 50, y: 22, z: 2.2, back: true },
+  Chest: { f: "main/muscle-4.svg", x: 50, y: 25, z: 2.6 },
+  Back: { f: "main/muscle-12.svg", x: 50, y: 34, z: 2.2, back: true },
+  Lats: { f: "main/muscle-12.svg", x: 50, y: 34, z: 2.2, back: true },
+  "Mid Back": { f: "main/muscle-12.svg", x: 50, y: 34, z: 2.2, back: true },
+  "Lower Back": { f: "main/muscle-9.svg", x: 50, y: 30, z: 2.1, back: true },
+  Shoulders: { f: "main/muscle-2.svg", x: 57, y: 24, z: 2.4 },
+  "Side Delt": { f: "main/muscle-2.svg", x: 57, y: 24, z: 2.4 },
+  "Front Delt": { f: "main/muscle-2.svg", x: 57, y: 24, z: 2.4 },
+  "Rear Delt": { f: "main/muscle-2.svg", x: 57, y: 24, z: 2.4, back: true },
+  Biceps: { f: "main/muscle-1.svg", x: 60, y: 31, z: 2.4 },
+  Triceps: { f: "main/muscle-5.svg", x: 60, y: 31, z: 2.4, back: true },
+  Forearms: { f: "main/muscle-13.svg", x: 59, y: 32, z: 2.5 },
+  Quads: { f: "main/muscle-10.svg", x: 50, y: 60, z: 2.1 },
+  Hamstrings: { f: "main/muscle-11.svg", x: 50, y: 66, z: 2.1, back: true },
+  Glutes: { f: "main/muscle-8.svg", x: 50, y: 54, z: 2.0, back: true },
+  Calves: { f: "main/muscle-7.svg", x: 50, y: 84, z: 1.9, back: true },
+  Abs: { f: "main/muscle-6.svg", x: 50, y: 41, z: 2.3 },
+  "Upper Abs": { f: "main/muscle-6.svg", x: 50, y: 39, z: 2.4 },
+  "Lower Abs": { f: "main/muscle-6.svg", x: 50, y: 44, z: 2.4 },
+  Obliques: { f: "main/muscle-14.svg", x: 50, y: 40, z: 2.3 },
+  Traps: { f: "main/muscle-9.svg", x: 50, y: 22, z: 2.2, back: true },
 };
 
 /** إيموجي العضلات — fallback آخر في السلسلة */
