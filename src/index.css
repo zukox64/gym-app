@@ -154,6 +154,44 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   background: var(--accent); color: #000; font-weight: 700; font-size: 14px; cursor: pointer;
 }
 .btn-save:hover { background: #e5e5e5; }
+
+/* ===== Templates ===== */
+.templates-grid { display: flex; flex-direction: column; gap: 14px; }
+.template-card {
+  background: linear-gradient(145deg, rgba(44, 44, 46, 0.9) 0%, rgba(28, 28, 30, 0.9) 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 20px 40px -30px rgba(255, 255, 255, 0.4);
+}
+.template-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.template-name { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: -0.01em; }
+.template-desc { margin: 4px 0 0; font-size: 13px; color: var(--text-dim); }
+.template-badge {
+  border-radius: 9999px; padding: 6px 12px; font-size: 12px; font-weight: 700;
+  border: 1px solid var(--border);
+}
+.badge-beginner { background: rgba(52, 199, 89, 0.16); color: #34c759; border-color: rgba(52, 199, 89, 0.4); }
+.badge-mid { background: rgba(255, 214, 10, 0.14); color: #ffd60a; border-color: rgba(255, 214, 10, 0.4); }
+.badge-advanced { background: rgba(255, 69, 58, 0.16); color: #ff453a; border-color: rgba(255, 69, 58, 0.4); }
+.template-meta { display: flex; flex-wrap: wrap; gap: 8px; }
+.template-pill {
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 9999px;
+  padding: 5px 10px; font-size: 12px; color: var(--text-dim);
+}
+.template-days { display: flex; flex-direction: column; gap: 10px; }
+.template-day-row { display: flex; align-items: center; gap: 10px; }
+.template-day-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 6px var(--accent-soft); }
+.template-day-label { font-size: 14px; color: var(--text); }
+.template-more { font-size: 12px; color: var(--text-muted); margin-left: 18px; }
+.template-apply {
+  width: 100%; border: none; border-radius: var(--radius-sm); background: var(--accent);
+  color: #000; font-weight: 800; font-size: 15px; padding: 12px 0; cursor: pointer;
+}
+.template-apply:hover { background: #f5f5f5; }
 .btn-cancel {
   flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);
   background: var(--surface-2); color: var(--text-dim); font-weight: 600; font-size: 14px; cursor: pointer;

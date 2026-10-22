@@ -101,6 +101,86 @@ const defaultPlan = (): WorkoutDay[] => [
   { id: uid(), label: "Day 3 — Legs", exercises: [] },
 ];
 
+interface PlanTemplate {
+  id: string;
+  name: string;
+  description: string;
+  level: string;
+  days: number;
+  split: string;
+  daysPlan: { label: string; muscles: string[] }[];
+}
+
+const PLAN_TEMPLATES: PlanTemplate[] = [
+  {
+    id: "ppl",
+    name: "Push / Pull / Legs",
+    description: "كلاسيكي جداً وفعال جداً، مناسب لمعظم الناس",
+    level: "Intermediate",
+    days: 3,
+    split: "PPL",
+    daysPlan: [
+      { label: "Day 1 — Push (Chest/Shoulders/Triceps)", muscles: ["Chest", "Shoulders", "Side Delt", "Front Delt", "Triceps"] },
+      { label: "Day 2 — Pull (Back/Biceps)", muscles: ["Back", "Lats", "Mid Back", "Rear Delt", "Biceps", "Traps"] },
+      { label: "Day 3 — Legs (Quads/Hamstrings/Glutes/Calves)", muscles: ["Quads", "Hamstrings", "Glutes", "Calves", "Abs"] },
+    ],
+  },
+  {
+    id: "fullbody3",
+    name: "Full Body 3x/Week",
+    description: "مثالي للمبتدئين، يركز على كل عضلات الجسم ٣ مرات أسبوعياً",
+    level: "Beginner",
+    days: 3,
+    split: "Full Body",
+    daysPlan: [
+      { label: "Day 1 — Full Body A", muscles: ["Chest", "Back", "Quads", "Shoulders", "Abs"] },
+      { label: "Day 2 — Full Body B", muscles: ["Quads", "Hamstrings", "Glutes", "Back", "Triceps", "Biceps"] },
+      { label: "Day 3 — Full Body C", muscles: ["Chest", "Lats", "Hamstrings", "Shoulders", "Abs", "Calves"] },
+    ],
+  },
+  {
+    id: "upperlower4",
+    name: "Upper / Lower 4x/Week",
+    description: "توازن ممتاز بين الحجم والتعافي، مناسب للمتوسط",
+    level: "Intermediate",
+    days: 4,
+    split: "Upper/Lower",
+    daysPlan: [
+      { label: "Day 1 — Upper Body", muscles: ["Chest", "Back", "Shoulders", "Biceps", "Triceps"] },
+      { label: "Day 2 — Lower Body", muscles: ["Quads", "Hamstrings", "Glutes", "Calves", "Abs"] },
+      { label: "Day 3 — Upper Body Focus", muscles: ["Chest", "Lats", "Rear Delt", "Side Delt", "Biceps", "Triceps"] },
+      { label: "Day 4 — Lower Body Focus", muscles: ["Quads", "Hamstrings", "Glutes", "Calves", "Obliques"] },
+    ],
+  },
+  {
+    id: "fullbody2",
+    name: "Full Body 2x/Week",
+    description: "خفيف جداً، ممتاز لو وقتك ضيق أو لسه مبتدئ",
+    level: "Beginner",
+    days: 2,
+    split: "Full Body",
+    daysPlan: [
+      { label: "Day 1 — Full Body", muscles: ["Chest", "Back", "Quads", "Shoulders", "Triceps", "Biceps", "Abs"] },
+      { label: "Day 2 — Full Body", muscles: ["Hamstrings", "Glutes", "Lats", "Shoulders", "Triceps", "Biceps", "Calves"] },
+    ],
+  },
+  {
+    id: "bro",
+    name: "Classic Bro Split 5x/Week",
+    description: "كل عضلة يوم لوحدها، يركز جداً على كل عضلة",
+    level: "Advanced",
+    days: 5,
+    split: "Body Part",
+    daysPlan: [
+      { label: "Day 1 — Chest", muscles: ["Chest"] },
+      { label: "Day 2 — Back", muscles: ["Back", "Lats", "Mid Back"] },
+      { label: "Day 3 — Shoulders", muscles: ["Shoulders", "Front Delt", "Side Delt", "Rear Delt", "Traps"] },
+      { label: "Day 4 — Arms", muscles: ["Biceps", "Triceps", "Forearms"] },
+      { label: "Day 5 — Legs", muscles: ["Quads", "Hamstrings", "Glutes", "Calves"] },
+    ],
+  },
+];
+
 const buildEx = (lib: Omit<Exercise, "id">): Exercise => ({ ...lib, id: uid() });
 
 interface IconProps { size?: number; }
@@ -304,6 +384,18 @@ const App: React.FC = () => {
     setEditingExercise(null);
   };
 
+  const applyTemplate = (template: PlanTemplate) => {
+    const newDays: WorkoutDay[] = template.daysPlan.map(dp => {
+      const picks = EXERCISE_LIBRARY.filter(e => dp.muscles.some(m => e.muscle.toLowerCase().includes(m.toLowerCase()) || m.toLowerCase().includes(e.muscle.toLowerCase())));
+      const selected = picks.slice(0, template.days <= 3 ? 5 : 4);
+      const exs = selected.map(p => buildEx(p));
+      return { id: uid(), label: dp.label, exercises: exs };
+    });
+    savePlan(newDays);
+    setExpandedDay(newDays[0]?.id || null);
+    setCurrentPage("Home");
+  };
+
   const addDay = () => {
     if (!newDayLabel.trim()) return;
     const next = [...days, { id: uid(), label: newDayLabel.trim(), exercises: [] }];
@@ -457,6 +549,59 @@ const App: React.FC = () => {
 
   // ===== Main App =====
   if (currentPage !== "Home") {
+    if (currentPage === "Schedule") {
+      return (
+        <div className="app">
+          <header className="header sticky dash-header">
+            <div className="dash-header-row">
+              <div>
+                <h1 className="dash-title">خطط جاهزة</h1>
+                <p className="dash-sub">اختار خطة وطبقها مباشرة على خطتك</p>
+              </div>
+            </div>
+          </header>
+          <main className="main dash-main">
+            <div className="templates-grid">
+              {PLAN_TEMPLATES.map(t => (
+                <div key={t.id} className="template-card">
+                  <div className="template-header">
+                    <div>
+                      <h3 className="template-name">{t.name}</h3>
+                      <p className="template-desc">{t.description}</p>
+                    </div>
+                    <span className={`template-badge ${t.level === "Beginner" ? "badge-beginner" : t.level === "Advanced" ? "badge-advanced" : "badge-mid"}`}>{t.level}</span>
+                  </div>
+                  <div className="template-meta">
+                    <span className="template-pill">{t.days} أيام</span>
+                    <span className="template-pill">{t.split}</span>
+                  </div>
+                  <div className="template-days">
+                    {t.daysPlan.slice(0, 3).map((dp, idx) => (
+                      <div key={idx} className="template-day-row">
+                        <div className="template-day-dot" />
+                        <span className="template-day-label">{dp.label}</span>
+                      </div>
+                    ))}
+                    {t.daysPlan.length > 3 && <span className="template-more">+{t.daysPlan.length - 3} أيام أخرى</span>}
+                  </div>
+                  <button className="template-apply" onClick={() => applyTemplate(t)}>تطبيق الخطة</button>
+                </div>
+              ))}
+            </div>
+          </main>
+          <nav className="bottom-nav">
+            <div className="nav-inner">
+              {navItems.map(({ page, Icon }) => (
+                <button key={page} onClick={() => setCurrentPage(page)}
+                  className={`nav-item ${currentPage === page ? "nav-active" : "nav-inactive"}`}>
+                  <span className={`nav-icon-wrap ${currentPage === page ? "nav-icon-active" : ""}`}><Icon size={20} /></span>
+                </button>
+              ))}
+            </div>
+          </nav>
+        </div>
+      );
+    }
     return (
       <div className="app">
         <div className="placeholder">
