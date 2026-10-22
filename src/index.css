@@ -67,6 +67,9 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   padding-bottom: 90px;
 }
 
+/* D: fallback أثناء تحميل chunk التاب */
+.tab-loading { padding: 24px 16px; color: var(--text-dim); font-size: var(--fs-sm); text-align: center; }
+
 /* ===== Header ===== */
 .header { background: var(--bg); }
 .header.sticky { position: sticky; top: 0; z-index: 40; }

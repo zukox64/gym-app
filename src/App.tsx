@@ -4,12 +4,13 @@
  *  - الشاشات في components، المنطق النقي في lib، المخزن في hooks.
  */
 
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { Onboarding } from "./components/Onboarding";
 import { HomeTab } from "./components/HomeTab";
-import { ScheduleTab } from "./components/ScheduleTab";
-import { ProgressTab } from "./components/ProgressTab";
-import { AITab } from "./components/AITab";
+/* D: تابات أقل استخدامًا — chunks مستقلة تتنزّل عند أول فتح */
+const ScheduleTab = lazy(() => import("./components/ScheduleTab").then(m => ({ default: m.ScheduleTab })));
+const ProgressTab = lazy(() => import("./components/ProgressTab").then(m => ({ default: m.ProgressTab })));
+const AITab = lazy(() => import("./components/AITab").then(m => ({ default: m.AITab })));
 import { WorkoutSession } from "./components/WorkoutSession";
 import { ThemeModal } from "./components/ThemeModal";
 import { NavBar } from "./components/NavBar";
@@ -221,25 +222,33 @@ export default function App() {
         />
       )}
       {currentPage === "Schedule" && (
-        <ScheduleTab
-          profile={profile}
-          setPlan={savePlan}
-          goToHome={() => setCurrentPage("Home")}
-          onToast={onToast}
-          onOpenTheme={() => setShowTheme(true)}
-        />
+        <Suspense fallback={<div className="tab-loading">...جاي</div>}>
+          <ScheduleTab
+            profile={profile}
+            setPlan={savePlan}
+            goToHome={() => setCurrentPage("Home")}
+            onToast={onToast}
+            onOpenTheme={() => setShowTheme(true)}
+          />
+        </Suspense>
       )}
       {currentPage === "Progress" && (
-        <ProgressTab
-          logs={logs}
-          profile={profile}
-          onDeleteLog={deleteLog}
-          body={body}
-          onAddBody={(v, d) => addBody(v, d)}
-          onOpenTheme={() => setShowTheme(true)}
-        />
+        <Suspense fallback={<div className="tab-loading">...جاي</div>}>
+          <ProgressTab
+            logs={logs}
+            profile={profile}
+            onDeleteLog={deleteLog}
+            body={body}
+            onAddBody={(v, d) => addBody(v, d)}
+            onOpenTheme={() => setShowTheme(true)}
+          />
+        </Suspense>
       )}
-      {currentPage === "AI" && <AITab />}
+      {currentPage === "AI" && (
+        <Suspense fallback={<div className="tab-loading">...جاي</div>}>
+          <AITab />
+        </Suspense>
+      )}
 
       <NavBar page={currentPage} onGo={setCurrentPage} />
       {themeModalEl}
