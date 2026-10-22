@@ -96,7 +96,7 @@ export const sanitizeBodyLog = (v: unknown): BodyWeightPoint[] => {
 
 export const makeBundle = (args: {
   profile: UserProfile | null;
-  plan: WorkoutDay[];
+  plan: WorkoutDay[] | null;
   logs: WorkoutLog[];
   body?: BodyWeightPoint[] | null;
 }): DataBundle => ({
@@ -108,10 +108,12 @@ export const makeBundle = (args: {
   ...(Array.isArray(args.body) ? { body: args.body } : {}),
 });
 
-/** بيقرأ JSON مجمّع مستورد وبيصلح كل جزء — بيرجع null لو مفيش حاجة مفهومة فيه */
-export const parseBundle = (json: string): DataBundle | null => {
-  let raw: unknown;
-  try { raw = JSON.parse(json); } catch { return null; }
+/** بيقرأ JSON مجمّع مستورد (نص أو object مباشر) وبيصلح كل جزء — بيرجع null لو مفيش حاجة مفهومة فيه */
+export const parseBundle = (json: string | unknown): DataBundle | null => {
+  let raw: unknown = json;
+  if (typeof json === "string") {
+    try { raw = JSON.parse(json); } catch { return null; }
+  }
   if (!raw || typeof raw !== "object") return null;
   const b = raw as Partial<DataBundle>;
   const profile = b.profile === null || b.profile === undefined ? null : sanitizeProfile(b.profile);
