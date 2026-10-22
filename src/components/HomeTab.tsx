@@ -21,6 +21,7 @@ import { ExerciseThumb } from "./ExerciseThumb";
 import { ExercisePicker } from "./ExercisePicker";
 import { FinishModal } from "./FinishModal";
 import { unitOf } from "../lib/units";
+import { clampF, clampN, REPS_RANGE, SETS_RANGE, WEIGHT_KG_SET, WEIGHT_LBS_SET } from "../lib/validate";
 import { todayKey } from "../lib/date";
 import { uid } from "../lib/id";
 import { EXERCISE_LIBRARY } from "../data/exerciseLibrary";
@@ -66,8 +67,17 @@ export const HomeTab: React.FC<HomeTabProps> = ({ days, profile, setPlan, addLog
 
   const saveExerciseEdit = () => {
     if (!editingExercise) return;
+    // R2-1: الحفظ دايمًا جوه الحدود (مجموعات 1–20، ع stabilization 1–200، وزن ≥ 0)
+    const setCap = SETS_RANGE;
+    const repCap = REPS_RANGE;
+    const wCap = (profile?.weightUnit ?? "kg") === "lbs" ? WEIGHT_LBS_SET : WEIGHT_KG_SET;
     setPlan(days.map(d => d.id === editingExercise.dayId
-      ? { ...d, exercises: d.exercises.map(e => e.id === editingExercise.ex.id ? { ...e, sets: editSets, reps: editReps, weight: editWeight } : e) }
+      ? { ...d, exercises: d.exercises.map(e => e.id === editingExercise.ex.id
+          ? { ...e,
+              sets: clampN(editSets, setCap[0], setCap[1]),
+              reps: clampN(editReps, repCap[0], repCap[1]),
+              weight: clampF(editWeight, wCap[0], wCap[1]) }
+          : e) }
       : d));
     setEditingExercise(null);
   };
@@ -298,9 +308,8 @@ export const HomeTab: React.FC<HomeTabProps> = ({ days, profile, setPlan, addLog
               <div className="edit-field">
                 <label className="ob-field-label">{S.home.reps}</label>
                 <div className="stepper">
-                  <button className="stepper-btn" onClick={() => setEditReps(r => Math.max(1, r - 1))}><MinusIcon /></button>
-                  <span className="stepper-label">{editReps}</span>
-                  <button className="stepper-btn" onClick={() => setEditReps(r => Math.min(100, r + 1))}><PlusIcon size={14} /></button>
+                  <button className="stepper-btn" onClick={() => setEditReps(r => Math.max(1, r - 1))}><MinusIcon /></button>                  <span className="stepper-label">{editReps}</span>
+                  <button className="stepper-btn" onClick={() => setEditReps(r => Math.min(200, r + 1))}><PlusIcon size={14} /></button>
                 </div>
               </div>
             </div>
@@ -311,9 +320,9 @@ export const HomeTab: React.FC<HomeTabProps> = ({ days, profile, setPlan, addLog
                 <span className="edit-weight-hint">{unit}</span>
               </div>
               <div className="stepper stepper-wide">
-                <button className="stepper-btn" onClick={() => setEditWeight(w => Math.max(0, w - 2.5))}><MinusIcon /></button>
+                <button className="stepper-btn" onClick={() => setEditWeight(w => Math.min(500, Math.max(0, w - 2.5)))}><MinusIcon /></button>
                 <span className="stepper-label">{editWeight}</span>
-                <button className="stepper-btn" onClick={() => setEditWeight(w => w + 2.5)}><PlusIcon size={14} /></button>
+                <button className="stepper-btn" onClick={() => setEditWeight(w => Math.min(500, Math.max(0, w) + 2.5))}><PlusIcon size={14} /></button>
               </div>
             </div>
 

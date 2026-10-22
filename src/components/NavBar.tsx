@@ -3,7 +3,7 @@
  */
 
 import * as React from "react";
-import { navItems } from "./icons";
+import { navItems } from "./navItems";
 import { FEATURES } from "../config";
 import type { Page } from "../types";
 

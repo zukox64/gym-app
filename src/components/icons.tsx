@@ -125,9 +125,3 @@ export const UploadIcon: React.FC<IconProps> = ({ size = 18 }) => (
 
 export interface NavEntry { page: Page; Icon: React.FC<IconProps> }
 
-export const navItems: NavEntry[] = [
-  { page: "Home", Icon: GridIcon },
-  { page: "Schedule", Icon: CalendarIcon },
-  { page: "Progress", Icon: BarChartIcon },
-  { page: "AI", Icon: ChatIcon },
-];

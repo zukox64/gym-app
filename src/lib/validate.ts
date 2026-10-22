@@ -12,8 +12,22 @@ export const HEIGHT_FT = [2, 8] as const;
 export const TARGET_KG = [30, 400] as const;
 export const TARGET_LBS = [65, 880] as const;
 
+/* R2-1: حدود التحرير في اليوم/السيشن — مجموعة وثقل ووزن السيت */
+export const SETS_RANGE = [1, 20] as const;
+export const REPS_RANGE = [1, 200] as const;
+/** وزن السيت ≥ 0 ويتحول من lbs (1000 lbs سقف معقول) */
+export const WEIGHT_KG_SET = [0, 500] as const;
+export const WEIGHT_LBS_SET = [0, 1000] as const;
+
+/** أي مدخل غير رقمي (NaN) بيرجع للحد الأدنى — مش بينشر NaN في البيانات */
+const safe = (v: number, min: number): number => (Number.isFinite(v) ? v : min);
+
 export const clampN = (v: number, min: number, max: number): number =>
-  Math.min(max, Math.max(min, Math.round(v)));
+  Math.min(max, Math.max(min, Math.round(safe(v, min))));
+
+/** R2-1: clamp من غير تقريب — للوزن (خطوات 2.5 لازمة) */
+export const clampF = (v: number, min: number, max: number): number =>
+  Math.min(max, Math.max(min, safe(v, min)));
 
 /** lbs ↔ kg تقريب */
 export const toLbs = (kg: number): number => Math.round(kg * 2.20462);
