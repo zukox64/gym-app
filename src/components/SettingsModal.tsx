@@ -6,7 +6,8 @@
 import * as React from "react";
 import { useRef } from "react";
 import { Modal, ModalHeader } from "./ui/Modal";
-import { ChevronDown, DownloadIcon, EditIcon, PaletteIcon, UploadIcon } from "./icons";
+import { ChevronDown, DownloadIcon, EditIcon, MinusIcon, PaletteIcon, PlusIcon, UploadIcon } from "./icons";
+import { REST_RANGE } from "../config";
 import { S } from "../strings";
 import type { UserProfile } from "../types";
 
@@ -15,6 +16,8 @@ interface SettingsModalProps {
   onEditProfile: () => void;
   onExport: () => void;
   onImportFile: (file: File) => void;
+  onRestDelta: (delta: number) => void;
+  onExportCsv: () => void;
   onOpenTheme: () => void;
   onClose: () => void;
 }
@@ -22,7 +25,7 @@ interface SettingsModalProps {
 const settingsRow = "settings-row";
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
-  profile, onEditProfile, onExport, onImportFile, onOpenTheme, onClose,
+  profile, onEditProfile, onExport, onImportFile, onRestDelta, onExportCsv, onOpenTheme, onClose,
 }) => {
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -48,11 +51,29 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <span className="settings-row-label">{S.settings.import}</span>
           <span className="settings-row-go"><ChevronDown size={16} /></span>
         </button>
+        {/* B9: CSV */}
+        <button className={settingsRow} onClick={() => { onExportCsv(); }}>
+          <span className="settings-row-icon"><DownloadIcon size={18} /></span>
+          <span className="settings-row-label">{S.settings.exportCsv}</span>
+          <span className="settings-row-go"><ChevronDown size={16} /></span>
+        </button>
         <button className={settingsRow} onClick={() => { onClose(); onOpenTheme(); }}>
           <span className="settings-row-icon"><PaletteIcon size={18} /></span>
           <span className="settings-row-label">{S.settings.theme}</span>
           <span className="settings-row-go"><ChevronDown size={16} /></span>
         </button>
+      </div>
+
+      {/* B1: الاستراحة الافتراضية — stepper ±15 داخل الحدود */}
+      <div className="settings-rest">
+        <span className="settings-rest-label">{S.settings.rest}</span>
+        <div className="weight-stepper">
+          <button className="stepper-btn stepper-btn-sm" onClick={() => onRestDelta(-15)}
+            disabled={(profile?.restSeconds ?? 0) <= REST_RANGE[0]}><MinusIcon /></button>
+          <span className="weight-val">{profile?.restSeconds ?? 90}<em>ث</em></span>
+          <button className="stepper-btn stepper-btn-sm" onClick={() => onRestDelta(15)}
+            disabled={(profile?.restSeconds ?? 90) >= REST_RANGE[1]}><PlusIcon size={12} /></button>
+        </div>
       </div>
 
       <input

@@ -5,7 +5,7 @@
 import * as React from "react";
 import type { Page } from "../types";
 
-export interface IconProps { size?: number }
+export interface IconProps { size?: number; style?: React.CSSProperties }
 
 export const PlusIcon: React.FC<IconProps> = ({ size = 22 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -27,8 +27,8 @@ export const EditIcon: React.FC<IconProps> = ({ size = 18 }) => (
   </svg>
 );
 
-export const ChevronDown: React.FC<IconProps> = ({ size = 20 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+export const ChevronDown: React.FC<IconProps> = ({ size = 20, style }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}>
     <polyline points="6 9 12 15 18 9" />
   </svg>
 );

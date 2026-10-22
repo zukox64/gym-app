@@ -14,11 +14,12 @@ import { WorkoutSession } from "./components/WorkoutSession";
 import { ThemeModal } from "./components/ThemeModal";
 import { NavBar } from "./components/NavBar";
 import { SettingsModal } from "./components/SettingsModal";
+import { useBodyweight } from "./hooks/useBodyweight";
 import { useLocalStorage } from "./hooks/useLocalStorage";
 import { useTheme } from "./hooks/useTheme";
 import { useWorkoutLogs } from "./hooks/useWorkoutLogs";
 import { useWorkoutSession } from "./hooks/useWorkoutSession";
-import { STORAGE_KEYS } from "./config";
+import { DEFAULT_REST_SECONDS, REST_RANGE, STORAGE_KEYS } from "./config";
 import { makeBundle, parseBundle, sanitizePlan, sanitizeProfile } from "./lib/migrations";
 import { closeRest } from "./lib/sessionUtils";
 import { fmtClock, todayKey } from "./lib/date";
@@ -42,8 +43,10 @@ export default function App() {
     validate: sanitizePlan,
   });
   const { logs, setLogs, addLog } = useWorkoutLogs();
+  const { body, addBody } = useBodyweight();
   const { theme, setTheme } = useTheme();
-  const api = useWorkoutSession();
+  // B1: الاستراحة الافتراضية من الملف الشخصي (fallback 90)
+  const api = useWorkoutSession(profile?.restSeconds ?? DEFAULT_REST_SECONDS);
 
   const [currentPage, setCurrentPage] = useState<Page>("Home");
   const [editingProfile, setEditingProfile] = useState(false);
@@ -64,7 +67,7 @@ export default function App() {
 
   /* ===== A7: تصدير/استيراد ===== */
   const exportData = () => {
-    const bundle = makeBundle({ profile, plan: days, logs });
+    const bundle = makeBundle({ profile, plan: days, logs, body });
     const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -75,8 +78,33 @@ export default function App() {
     setToast(S.settings.exported);
   };
 
-  const importFile = (file: File) => {
-    file.text()
+  const downloadBlob = (blob: Blob, name: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  /** B9: CSV لسجل التمارين (UTF-8 + BOM يفتح صح في Excel) */
+  const exportCsv = () => {
+    const rows: string[] = ["date,day,exercise,muscle,sets,reps,weight,volume"];
+    for (const l of logs) {
+      for (const e of l.exercises) {
+        const vol = e.sets * e.reps * e.weight;
+        rows.push([l.date, l.dayLabel.replace(/,/g, " "), e.name.replace(/,/g, " "), e.muscle.replace(/,/g, " "), e.sets, e.reps, e.weight, vol].join(","));
+      }
+    }
+    const csv = "\uFEFF" + rows.join("\n");
+    downloadBlob(new Blob([csv], { type: "text/csv;charset=utf-8" }), `gym-logs-${new Date().toISOString().slice(0, 10)}.csv`);
+    setToast(S.settings.csvExported);
+  };
+
+  /** B7: حذف سجل من التقدم */
+  const deleteLog = (id: string) => setLogs(prev => prev.filter(l => l.id !== id));
+
+  const importFile = (file: File) => {    file.text()
       .then(json => {
         const bundle = parseBundle(json);
         if (!bundle) { setToast(S.settings.importFailed); return; }
@@ -127,6 +155,13 @@ export default function App() {
     setEditingProfile(false);
   };
 
+  /** B1: تغيير الاستراحة الافتراضية ±15 داخل الحدود */
+  const changeRest = (delta: number) => {
+    if (!profile) return;
+    const next = Math.min(REST_RANGE[1], Math.max(REST_RANGE[0], (profile.restSeconds ?? DEFAULT_REST_SECONDS) + delta));
+    setProfile({ ...profile, restSeconds: next });
+  };
+
   const toastEl = toast ? <div className="toast">{toast}</div> : null;
   const themeModalEl = (
     <ThemeModal
@@ -142,6 +177,8 @@ export default function App() {
       onEditProfile={() => setEditingProfile(true)}
       onExport={exportData}
       onImportFile={importFile}
+      onRestDelta={changeRest}
+      onExportCsv={exportCsv}
       onOpenTheme={() => setShowTheme(true)}
       onClose={() => setShowSettings(false)}
     />
@@ -193,7 +230,14 @@ export default function App() {
         />
       )}
       {currentPage === "Progress" && (
-        <ProgressTab logs={logs} profile={profile} onOpenTheme={() => setShowTheme(true)} />
+        <ProgressTab
+          logs={logs}
+          profile={profile}
+          onDeleteLog={deleteLog}
+          body={body}
+          onAddBody={(v, d) => addBody(v, d)}
+          onOpenTheme={() => setShowTheme(true)}
+        />
       )}
       {currentPage === "AI" && <AITab />}
 

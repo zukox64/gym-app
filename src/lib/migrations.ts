@@ -14,6 +14,8 @@ export interface DataBundle {
   profile: UserProfile | null;
   plan: WorkoutDay[] | null;
   logs: WorkoutLog[] | null;
+  /** B6: وزن الجسم (اختياري — النسخ القديمة من غيره مستوردة زي ما هي) */
+  body?: BodyWeightPoint[] | null;
 }
 
 /* ===== الفاليدين ====================== */
@@ -42,6 +44,10 @@ export const sanitizeProfile = (v: unknown): UserProfile | null => {
     level: typeof p.level === "string" ? p.level : "",
     daysPerWeek: p.daysPerWeek,
     equipment: p.equipment.map(String),
+    // B1: نحفظ الاستراحة الدهب لو صالحة (30–600) — وإلا نسيبها تحت وتفضل الـ default
+    ...(isFiniteNum(p.restSeconds) && p.restSeconds >= 30 && p.restSeconds <= 600
+      ? { restSeconds: p.restSeconds }
+      : {}),
   };
 };
 
@@ -73,12 +79,33 @@ export const sanitizeLogs = (v: unknown): WorkoutLog[] => {
 
 /* ===== التصدير/الاستيراد ================= */
 
-export const makeBundle = (args: { profile: UserProfile | null; plan: WorkoutDay[]; logs: WorkoutLog[] }): DataBundle => ({
+/** نقطة وزن جسم (B6) */
+export interface BodyWeightPoint { d: string; v: number }
+
+const isIsoDate = (s: unknown): s is string => typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s);
+
+export const sanitizeBodyLog = (v: unknown): BodyWeightPoint[] => {
+  if (!Array.isArray(v)) return [];
+  const out: BodyWeightPoint[] = [];
+  for (const item of v) {
+    const p = item as Partial<BodyWeightPoint>;
+    if (isIsoDate(p.d) && isFiniteNum(p.v) && p.v > 0) out.push({ d: p.d, v: p.v });
+  }
+  return out;
+};
+
+export const makeBundle = (args: {
+  profile: UserProfile | null;
+  plan: WorkoutDay[];
+  logs: WorkoutLog[];
+  body?: BodyWeightPoint[] | null;
+}): DataBundle => ({
   version: DATA_VERSION,
   exportedAt: new Date().toISOString(),
   profile: args.profile,
   plan: args.plan,
   logs: args.logs,
+  ...(Array.isArray(args.body) ? { body: args.body } : {}),
 });
 
 /** بيقرأ JSON مجمّع مستورد وبيصلح كل جزء — بيرجع null لو مفيش حاجة مفهومة فيه */
@@ -90,8 +117,9 @@ export const parseBundle = (json: string): DataBundle | null => {
   const profile = b.profile === null || b.profile === undefined ? null : sanitizeProfile(b.profile);
   const plan = planOrNull(b.plan);
   const logs = b.logs === null || b.logs === undefined ? null : sanitizeLogs(b.logs);
-  if (!profile && !plan && !logs) return null;
-  return { version: 1, exportedAt: typeof b.exportedAt === "string" ? b.exportedAt : "", profile, plan, logs };
+  const body = b.body === null || b.body === undefined ? null : sanitizeBodyLog(b.body);
+  if (!profile && !plan && !logs && (!body || body.length === 0)) return null;
+  return { version: 1, exportedAt: typeof b.exportedAt === "string" ? b.exportedAt : "", profile, plan, logs, ...(body && body.length ? { body } : {}) };
 
   function planOrNull(v: unknown): WorkoutDay[] | null {
     if (v === null || v === undefined) return null;

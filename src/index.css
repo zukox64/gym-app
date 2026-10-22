@@ -980,6 +980,62 @@ body { transition: background .3s ease; }
   .stat-grid { grid-template-columns: repeat(3, 1fr); }
 }
 
+/* ===== B: المزايا الإضافية ===== */
+/* B8: كارت الأسبوع */
+.week-card .week-hint { margin: 0; font-size: var(--fs-sm); color: var(--text-dim); font-weight: 600; }
+.week-card .week-hint.up { color: var(--green); }
+.week-card .week-hint.down { color: var(--danger-text); }
+
+/* B7: حذف سجل */
+.recent-del {
+  border: 1px solid var(--border); background: transparent; color: var(--text-dim);
+  border-radius: 8px; padding: 6px 8px; cursor: pointer; display: inline-flex; align-items: center;
+  font-family: inherit; font-size: 10px; font-weight: 700; flex-shrink: 0;
+}
+.recent-del:hover { color: var(--danger-text); border-color: var(--danger-border); }
+.recent-del-arm { background: var(--danger-bg); border-color: var(--danger-border); color: var(--danger-text); }
+
+/* B4: تقدم التمرين */
+.ex-progress-select { width: 100%; margin-bottom: 12px; }
+.ex-history-list { display: flex; flex-direction: column; gap: 8px; }
+.ex-history-row { display: flex; align-items: center; gap: 10px; }
+.ex-history-date { font-size: var(--fs-xs); color: var(--text-dim); width: 74px; flex-shrink: 0; }
+.ex-history-bar-track { flex: 1; height: 10px; background: var(--surface-2); border-radius: 9999px; overflow: hidden; }
+.ex-history-bar { height: 100%; background: var(--brand); border-radius: 9999px; }
+.ex-history-val { font-size: var(--fs-xs); color: var(--text); font-weight: 700; width: 108px; text-align: end; flex-shrink: 0; }
+
+/* B5: PRs */
+.pr-list { display: flex; flex-direction: column; gap: 6px; }
+.pr-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 12px; background: var(--surface-2); border-radius: var(--radius-sm); }
+.pr-name { font-size: var(--fs-sm); font-weight: 700; color: var(--text); }
+.pr-val { font-size: var(--fs-sm); font-weight: var(--fw-heavy); color: var(--brand); }
+.pr-val em { font-style: normal; font-size: 10px; color: var(--text-dim); margin-inline-start: 3px; }
+
+/* B6: وزن الجسم */
+.body-input-row { display: flex; gap: 8px; margin-bottom: 12px; }
+.body-input { flex: 1; }
+.body-save { flex-shrink: 0; }
+.body-points { display: flex; flex-direction: column; gap: 6px; }
+.body-point-row { display: flex; justify-content: space-between; padding: 8px 12px; background: var(--surface-2); border-radius: var(--radius-sm); }
+.body-val { font-weight: var(--fw-heavy); color: var(--text); font-size: var(--fs-sm); }
+
+/* B1: صف الاستراحة في الإعدادات */
+.settings-rest {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 12px 14px; margin-top: 10px;
+  background: var(--surface-2); border-radius: var(--radius-sm);
+}
+.settings-rest-label { font-size: var(--fs-sm); font-weight: 700; color: var(--text); }
+
+/* B2/B3: صفوف الفريق + الاستبدال */
+.ex-row-actions { display: flex; gap: 4px; }
+.ex-action:disabled { opacity: .25; cursor: default; }
+.swap-title { font-size: var(--fs-sm); color: var(--text); margin: 14px 0 8px; }
+.swap-list { display: flex; flex-direction: column; gap: 6px; max-height: 240px; overflow-y: auto; }
+.swap-name { flex: 1; font-size: var(--fs-sm); font-weight: 700; color: var(--text); text-align: start; }
+.swap-sets { font-size: var(--fs-xs); color: var(--text-dim); }
+.modal-swap-toggle { width: 100%; margin-top: 12px; }
+
 /* ===== A7: شاشة الأمان (ErrorBoundary) ===== */
 .error-boundary {
   min-height: 100vh; display: flex; align-items: center; justify-content: center;

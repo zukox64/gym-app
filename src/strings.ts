@@ -63,6 +63,8 @@ export const S = {
     reps: "عددات",
     weightPerSet: "وزن العدة",
     searchPh: "دوّر على التمرين...",
+    swapBtn: "استبدل التمرين ببديل",
+    swapTitle: "بدائل لنفس العضلة — اختار واحد",
     noResults: "مفيش نتايج",
     rename: "غيّر الاسم",
     removeEx: "احذف التمرين",
@@ -83,6 +85,24 @@ export const S = {
     title: "تقدمك",
     sub: (n: number) => `كل كيلو بتحسبه · ${n} تمرين مسجّل`,
     theme: "الثيم",
+    // B8
+    weekTitle: "الأسبوع ده",
+    weekSub: (n: number, v: string) => `${n} ${n === 1 ? "تمرين" : "تمارين"} · حجم ${v}`,
+    // B4
+    exProgress: "تقدم أي تمرين",
+    pickPh: "اختار التمرين",
+    noSessions: "اختار تمرين تظهر لك أحدث جلساته",
+    lastSessions: "أحدث الجلسات",
+    // B5
+    prTitle: "أرقامك الشخصية",
+    prEmpty: "سجل تمارين بأوزان — يبنى لك الليست هنا",
+    // B6
+    bodyTitle: "وزن جسدك",
+    bodyPh: "وزنك دلووقتي",
+    save: "سجّل",
+    bodyEmpty: "سجّل وزنك الأول — وتتتبخط هنا",
+    // B7
+    confirmDel: "متأكد؟ اضغط تاني",
   },
 
   session: {
@@ -98,7 +118,10 @@ export const S = {
     export: "تصدير البيانات (نسخة احتياطية)",
     import: "استيراد نسخة",
     theme: "اختار ثيم",
+    rest: "الاستراحة الافتراضية",
     exported: "النسخة الاتنزّلت ✅",
+    exportCsv: "تصدير CSV (Excel)",
+    csvExported: "الملف الاتنزّل ✅",
     imported: "البيانات اترجعت ✅",
     importFailed: "الملف مش مفهوم — اتأكد إنه نسخة صح من التطبيق",
     importEmpty: "الملف مفيهوش بيانات مفهومة",

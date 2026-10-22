@@ -29,6 +29,8 @@ export interface UserProfile {
   level: string;
   daysPerWeek: number;
   equipment: string[];
+  /** الاستراحة الافتراضية بالثواني (B1) — اختيارية للحفاظ على التوافق مع النسخ القديمة */
+  restSeconds?: number;
 }
 
 /** حركة في خطة المستخدم */

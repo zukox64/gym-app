@@ -23,6 +23,7 @@ import { FinishModal } from "./FinishModal";
 import { unitOf } from "../lib/units";
 import { todayKey } from "../lib/date";
 import { uid } from "../lib/id";
+import { EXERCISE_LIBRARY } from "../data/exerciseLibrary";
 import { S } from "../strings";
 import type { Exercise, LoggedExercise, UserProfile, WorkoutDay, WorkoutLog } from "../types";
 
@@ -46,6 +47,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({ days, profile, setPlan, addLog
   const [editReps, setEditReps] = useState(12);
   const [editWeight, setEditWeight] = useState(0);
   const [pickerDayId, setPickerDayId] = useState<string | null>(null);
+  const [swapMode, setSwapMode] = useState(false);
   const [newDayLabel, setNewDayLabel] = useState("");
   const [showAddDay, setShowAddDay] = useState(false);
   const [renamingDay, setRenamingDay] = useState<string | null>(null);
@@ -92,6 +94,25 @@ export const HomeTab: React.FC<HomeTabProps> = ({ days, profile, setPlan, addLog
     day.exercises.forEach(e => { w[e.id] = e.weight || 0; });
     setFinishWeights(w);
     setDayToFinish(day);
+  };
+
+  /** B2: تحريك تمرين داخل اليوم (↑/↓) */
+  const moveExercise = (dayId: string, index: number, dir: -1 | 1) => {
+    setPlan(days.map(d => {
+      if (d.id !== dayId) return d;
+      const next = [...d.exercises];
+      const j = index + dir;
+      if (j < 0 || j >= next.length) return d;
+      [next[index], next[j]] = [next[j], next[index]];
+      return { ...d, exercises: next };
+    }));
+  };
+
+  /** B3: استبدال تمرين ببديل من نفس العضلة — نفس الـ id والمجموعات/الأوزان تفضل */
+  const swapExercise = (dayId: string, ex: Exercise, replacement: { name: string; muscle: string; sets: number; reps: number }) => {
+    setPlan(days.map(d => d.id === dayId
+      ? { ...d, exercises: d.exercises.map(e => e.id === ex.id ? { ...e, name: replacement.name, muscle: replacement.muscle, sets: replacement.sets, reps: replacement.reps } : e) }
+      : d));
   };
 
   const finishDay = () => {
@@ -197,6 +218,14 @@ export const HomeTab: React.FC<HomeTabProps> = ({ days, profile, setPlan, addLog
                           </div>
                           <div className="ex-sets">{ex.sets}×{ex.reps}</div>
                           <div className="ex-row-actions">
+                            <button className="ex-action" aria-label="تحريك لفوق" disabled={i === 0}
+                              onClick={() => moveExercise(day.id, i, -1)}>
+                              <ChevronDown size={13} style={{ transform: "rotate(180deg)" }} />
+                            </button>
+                            <button className="ex-action" aria-label="تحريك لتحت" disabled={i === day.exercises.length - 1}
+                              onClick={() => moveExercise(day.id, i, 1)}>
+                              <ChevronDown size={13} />
+                            </button>
                             <button className="ex-action" onClick={() => { setEditingExercise({ dayId: day.id, ex }); setEditSets(ex.sets); setEditReps(ex.reps); setEditWeight(ex.weight || 0); }}>
                               <EditIcon size={14} />
                             </button>
@@ -248,14 +277,14 @@ export const HomeTab: React.FC<HomeTabProps> = ({ days, profile, setPlan, addLog
 
       {editingExercise && (
         <div className="modal-overlay">
-          <div className="modal-backdrop" onClick={() => setEditingExercise(null)} />
+          <div className="modal-backdrop" onClick={() => { setEditingExercise(null); setSwapMode(false); }} />
           <div className="modal-sheet" role="dialog" aria-modal="true" aria-label={S.home.editTitle}>
             <div className="modal-header">
               <div>
                 <h3 className="modal-title">{S.home.editTitle}</h3>
                 <p className="modal-sub">{editingExercise.ex.name}</p>
               </div>
-              <button className="close-btn" onClick={() => setEditingExercise(null)}><XIcon size={22} /></button>
+              <button className="close-btn" onClick={() => { setEditingExercise(null); setSwapMode(false); }}><XIcon size={22} /></button>
             </div>
             <div className="edit-fields">
               <div className="edit-field">
@@ -287,6 +316,35 @@ export const HomeTab: React.FC<HomeTabProps> = ({ days, profile, setPlan, addLog
                 <button className="stepper-btn" onClick={() => setEditWeight(w => w + 2.5)}><PlusIcon size={14} /></button>
               </div>
             </div>
+
+            {/* B3: استبدال ببديل نفس العضلة */}
+            {swapMode ? (
+              <>
+                <h4 className="swap-title">{S.home.swapTitle}</h4>
+                <div className="swap-list">
+                  {EXERCISE_LIBRARY
+                    .filter(lib => lib.muscle === editingExercise.ex.muscle && lib.name !== editingExercise.ex.name)
+                    .slice(0, 8)
+                    .map(lib => (
+                      <button key={lib.name} className="picker-item" onClick={() => {
+                        swapExercise(editingExercise.dayId, editingExercise.ex, { name: lib.name, muscle: lib.muscle, sets: lib.sets, reps: lib.reps });
+                        setEditingExercise(null); setSwapMode(false);
+                      }}>
+                        <ExerciseThumb name={lib.name} muscle={lib.muscle} size={36} />
+                        <span className="swap-name">{lib.name}</span>
+                        <span className="swap-sets">{lib.sets}×{lib.reps}</span>
+                      </button>
+                    ))}
+                  {EXERCISE_LIBRARY.filter(lib => lib.muscle === editingExercise.ex.muscle && lib.name !== editingExercise.ex.name).length === 0 && (
+                    <p className="day-empty">مفيش بدائل لنفس العضلة</p>
+                  )}
+                </div>
+              </>
+            ) : (
+              <button className="btn-cancel modal-swap-toggle" onClick={() => setSwapMode(true)}>
+                {S.home.swapBtn}
+              </button>
+            )}
 
             <button className="btn-save modal-save" onClick={saveExerciseEdit}>{S.home.apply}</button>
           </div>

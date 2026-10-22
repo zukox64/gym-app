@@ -64,3 +64,59 @@ export const favoriteExercise = (monthLogs: readonly WorkoutLog[]): string => {
 /** تواريخ تح فيها تمرين (وحدة الشهر) */
 export const loggedDates = (monthLogs: readonly WorkoutLog[]): Set<string> =>
   new Set(monthLogs.map((l) => l.date));
+
+/* ===== B4–B5, B7-B8: عناصر التقدم ===== */
+
+export interface ExerciseSetPoint { date: string; weight: number; sets: number; reps: number }
+
+/** B4: تاريخ تمرين معيّن — أحدث تمرين أولًا (max weight لكل جلسة) */
+export const exerciseHistory = (logs: readonly WorkoutLog[], name: string): ExerciseSetPoint[] =>
+  logs
+    .filter((l) => l.exercises.some((e) => e.name === name))
+    .map((l) => ({
+      date: l.date,
+      weight: Math.max(...l.exercises.filter((e) => e.name === name).map((e) => e.weight)),
+      sets: Math.max(...l.exercises.filter((e) => e.name === name).map((e) => e.sets)),
+      reps: Math.max(...l.exercises.filter((e) => e.name === name).map((e) => e.reps)),
+    }))
+    .sort((a, b) => b.date.localeCompare(a.date));
+
+/** أسماء التمارين اللي في اللوجز (ترتيب أول ظهور) */
+export const loggedExerciseNames = (logs: readonly WorkoutLog[]): string[] => {
+  const seen: string[] = [];
+  const set = new Set<string>();
+  for (const l of logs) for (const e of l.exercises) {
+    if (!set.has(e.name)) { set.add(e.name); seen.push(e.name); }
+  }
+  return seen;
+};
+
+/** B5: PR لكل تمرين — أقصى وزن بحد ذاته */
+export const prMap = (logs: readonly WorkoutLog[]): Record<string, number> => {
+  const out: Record<string, number> = {};
+  for (const l of logs) for (const e of l.exercises) {
+    if (e.weight > (out[e.name] ?? -1)) out[e.name] = e.weight;
+  }
+  return out;
+};
+
+export interface WeekSummary { count: number; volume: number; prevCount: number; prevVolume: number }
+
+/** B8: ملخص 7 أيام مقارنة بالـ 7 اللي قبلها */
+export const weekSummary = (logs: readonly WorkoutLog[], todayIso: string = todayKey()): WeekSummary => {
+  const within = (iso: string, from: number, to: number): boolean => {
+    const t = new Date(todayIso + "T12:00:00").getTime();
+    const v = new Date(iso + "T12:00:00").getTime();
+    const age = t - v;
+    return age >= from && age < to;
+  };
+  const DAY = 86400000;
+  const current = logs.filter((l) => within(l.date, 0, 7 * DAY));
+  const previous = logs.filter((l) => within(l.date, 7 * DAY, 14 * DAY));
+  return {
+    count: current.length,
+    volume: current.reduce((s, l) => s + l.volume, 0),
+    prevCount: previous.length,
+    prevVolume: previous.reduce((s, l) => s + l.volume, 0),
+  };
+};
