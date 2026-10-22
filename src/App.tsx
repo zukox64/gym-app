@@ -95,6 +95,43 @@ const uid = () => Math.random().toString(36).slice(2, 10);
 const STORAGE_KEY = "gym-profile-v2";
 const PLAN_KEY = "gym-plan-v2";
 
+const EXERCISE_IMAGES: Record<string, string> = {
+  "Barbell Bench Press": "Barbell_Bench_Press_-_Medium_Grip/0.jpg",
+  "Incline Dumbbell Press": "Incline_Dumbbell_Press/0.jpg",
+  "Cable Fly": "Flat_Bench_Cable_Flyes/0.jpg",
+  "Push-ups": "Pushups/0.jpg",
+  "Dumbbell Rows": "Bent_Over_Two-Dumbbell_Row/0.jpg",
+  "Lat Pulldown": "Wide-Grip_Lat_Pulldown/0.jpg",
+  "Pull-ups": "Pullups/0.jpg",
+  "Seated Cable Row": "Seated_Cable_Rows/0.jpg",
+  "Overhead Press": "Standing_Military_Press/0.jpg",
+  "Lateral Raise": "Side_Lateral_Raise/0.jpg",
+  "Front Raise": "Front_Dumbbell_Raise/0.jpg",
+  "Face Pull": "Face_Pull/0.jpg",
+  "Barbell Curl": "Barbell_Curl/0.jpg",
+  "Hammer Curl": "Hammer_Curls/0.jpg",
+  "Preacher Curl": "Preacher_Curl/0.jpg",
+  "Tricep Pushdown": "Triceps_Pushdown/0.jpg",
+  "Skull Crushers": "EZ-Bar_Skullcrusher/0.jpg",
+  "Overhead Extension": "Cable_Rope_Overhead_Triceps_Extension/0.jpg",
+  "Barbell Squat": "Barbell_Squat/0.jpg",
+  "Leg Press": "Leg_Press/0.jpg",
+  "Leg Extension": "Leg_Extensions/0.jpg",
+  "Romanian Deadlift": "Romanian_Deadlift/0.jpg",
+  "Leg Curl": "Lying_Leg_Curls/0.jpg",
+  "Hip Thrust": "Barbell_Hip_Thrust/0.jpg",
+  "Bulgarian Split Squat": "Split_Squat_with_Dumbbells/0.jpg",
+  "Calf Raise": "Standing_Calf_Raises/0.jpg",
+  "Crunches": "Crunches/0.jpg",
+  "Hanging Leg Raise": "Hanging_Leg_Raise/0.jpg",
+  "Plank": "Plank/0.jpg",
+  "Russian Twist": "Russian_Twist/0.jpg",
+  "Farmer's Walk": "Farmers_Walk/0.jpg",
+  "Barbell Shrug": "Barbell_Shrug/0.jpg",
+};
+
+const IMG_BASE = "https://cdn.jsdelivr.net/gh/yuhonas/free-exercise-db@main/exercises/";
+
 const defaultPlan = (): WorkoutDay[] => [
   { id: uid(), label: "Day 1 — Push", exercises: [] },
   { id: uid(), label: "Day 2 — Pull", exercises: [] },
@@ -256,6 +293,25 @@ const ChatIcon: React.FC<IconProps> = ({ size = 20 }) => (
     <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
   </svg>
 );
+
+const ExerciseThumb: React.FC<{ name: string; muscle: string; size?: number }> = ({ name, muscle, size = 40 }) => {
+  const [failed, setFailed] = useState(false);
+  const path = EXERCISE_IMAGES[name];
+
+  if (!path || failed) {
+    return (
+      <div className="ex-icon ex-icon-fallback" style={{ width: size, height: size }}>
+        {MUSCLE_ICONS[muscle] || "🏋️"}
+      </div>
+    );
+  }
+
+  return (
+    <div className="ex-thumb" style={{ width: size, height: size }}>
+      <img src={IMG_BASE + path} alt={name} loading="lazy" decoding="async" onError={() => setFailed(true)} />
+    </div>
+  );
+};
 
 const navItems: { page: Page; Icon: React.FC<IconProps> }[] = [
   { page: "Home", Icon: GridIcon },
@@ -683,7 +739,7 @@ const App: React.FC = () => {
                       {day.exercises.map((ex, i) => (
                         <div key={ex.id} className="ex-row">
                           <div className="ex-num">{i + 1}</div>
-                          <div className="ex-icon">{MUSCLE_ICONS[ex.muscle] || "🏋️"}</div>
+                          <ExerciseThumb name={ex.name} muscle={ex.muscle} />
                           <div className="ex-info">
                             <p className="ex-name">{ex.name}</p>
                             <p className="ex-muscle">{ex.muscle}</p>
@@ -786,7 +842,7 @@ const App: React.FC = () => {
             <div className="picker-list">
               {filteredLibrary.map((ex, i) => (
                 <button key={i} className="picker-item" onClick={() => addExerciseToDay(pickerDayId, ex)}>
-                  <div className="ex-icon">{MUSCLE_ICONS[ex.muscle] || "🏋️"}</div>
+                  <ExerciseThumb name={ex.name} muscle={ex.muscle} />
                   <div className="picker-item-info">
                     <p className="ex-name">{ex.name}</p>
                     <p className="ex-muscle">{ex.muscle} · {ex.sets}×{ex.reps}</p>
