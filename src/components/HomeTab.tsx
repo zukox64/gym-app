@@ -249,7 +249,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({ days, profile, setPlan, addLog
       {editingExercise && (
         <div className="modal-overlay">
           <div className="modal-backdrop" onClick={() => setEditingExercise(null)} />
-          <div className="modal-sheet">
+          <div className="modal-sheet" role="dialog" aria-modal="true" aria-label={S.home.editTitle}>
             <div className="modal-header">
               <div>
                 <h3 className="modal-title">{S.home.editTitle}</h3>
@@ -315,7 +315,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({ days, profile, setPlan, addLog
       {showDayPicker && (
         <div className="modal-overlay">
           <div className="modal-backdrop" onClick={() => setShowDayPicker(false)} />
-          <div className="modal-sheet theme-sheet" dir="rtl">
+          <div className="modal-sheet theme-sheet" dir="rtl" role="dialog" aria-modal="true" aria-label={S.home.pickDay}>
             <div className="modal-header">
               <div>
                 <h3 className="modal-title">{S.home.pickDay}</h3>

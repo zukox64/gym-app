@@ -950,6 +950,36 @@ body { transition: background .3s ease; }
 .settings-row-label { flex: 1; }
 .settings-row-go { display: inline-flex; color: var(--text-dim); transform: rotate(-90deg); }
 
+/* ===== A6: إمكانية الوصول + استجابة ===== */
+
+/* تباين AA: --text-muted القديمة 4.3:1 على --bg — نرفعها فوق 4.5 */
+:root { --text-muted: #848a94; }
+
+/* مؤشر تركيز واضح للكيبورد فقط (لمسة/ماوس ما بيظهرش) */
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 6px; }
+
+/* احترام تفضيل تقليل الحركة */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* أهداف لمس 44px للأزرار الدائرية */
+.icon-btn-circle { width: 44px; height: 44px; }
+
+/* responsive: شاشات أوسع */
+@media (min-width: 640px) {
+  .dash-header, .dash-main { max-width: 40rem; }
+}
+@media (min-width: 768px) {
+  .templates-grid { display: grid; grid-template-columns: repeat(2, 1fr); align-items: start; }
+  .stat-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
 /* ===== A7: شاشة الأمان (ErrorBoundary) ===== */
 .error-boundary {
   min-height: 100vh; display: flex; align-items: center; justify-content: center;
