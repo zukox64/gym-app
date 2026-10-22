@@ -1,36 +1,18 @@
 import React, { useState, useEffect } from "react";
-
-type Page = "Home" | "Schedule" | "Progress" | "AI";
-
-interface UserProfile {
-  name: string;
-  age: number;
-  weight: number;
-  weightUnit: "kg" | "lbs";
-  height: number;
-  heightUnit: "cm" | "ft";
-  goal: string;
-  targetWeight: number;
-  level: string;
-  daysPerWeek: number;
-  equipment: string[];
-}
-
-interface Exercise {
-  id: string;
-  name: string;
-  muscle: string;
-  icon: string;
-  sets: number;
-  reps: number;
-  weight?: number;
-}
-
-interface WorkoutDay {
-  id: string;
-  label: string;
-  exercises: Exercise[];
-}
+import { buildPlanFromTemplate } from "./lib/templateBuilder";
+import { PLAN_TEMPLATES } from "./data/templates";
+import { uid } from "./lib/id";
+import type {
+  LoggedExercise,
+  Page,
+  PlanTemplate,
+  SessionState,
+  ThemeKey,
+  UserProfile,
+  WorkoutDay,
+  WorkoutLog,
+  Exercise,
+} from "./types";
 
 const MUSCLE_ICONS: Record<string, string> = {
   Chest: "🫁",
@@ -90,8 +72,6 @@ const EXERCISE_LIBRARY: Omit<Exercise, "id">[] = [
   { name: "Farmer's Walk", muscle: "Forearms", icon: " farmer ", sets: 3, reps: 40 },
   { name: "Barbell Shrug", muscle: "Traps", icon: " shrug ", sets: 3, reps: 12 },
 ];
-
-const uid = () => Math.random().toString(36).slice(2, 10);
 
 const STORAGE_KEY = "gym-profile-v2";
 const PLAN_KEY = "gym-plan-v2";
@@ -205,7 +185,6 @@ const MUSCLE_IMG: Record<string, MuscleArt> = {
 };
 
 /* ===== Themes ===== */
-type ThemeKey = "mono" | "emerald" | "orange" | "violet" | "cyan" | "rose";
 const THEME_KEY = "gym-theme-v1";
 const THEMES: { key: ThemeKey; label: string; swatch: string }[] = [
   { key: "mono", label: "Dark", swatch: "#f5f6f7" },
@@ -218,44 +197,6 @@ const THEMES: { key: ThemeKey; label: string; swatch: string }[] = [
 
 /* ===== Workout logging ===== */
 const LOG_KEY = "gym-logs-v1";
-
-interface LoggedExercise {
-  name: string;
-  muscle: string;
-  sets: number;
-  reps: number;
-  weight: number;
-}
-interface WorkoutLog {
-  id: string;
-  date: string;
-  dayId: string;
-  dayLabel: string;
-  exercises: LoggedExercise[];
-  volume: number;
-  duration?: number;
-  rest?: number;
-}
-
-interface SessionItem {
-  id: string;
-  name: string;
-  muscle: string;
-  sets: number;
-  reps: number;
-  weight: number;
-  doneSets: number;
-}
-
-interface SessionState {
-  dayId: string;
-  label: string;
-  startedAt: number;
-  restSec: number;
-  items: SessionItem[];
-  currentIdx: number;
-  restLeft: number | null;
-}
 
 const REST_SECONDS = 90;
 
@@ -287,171 +228,6 @@ const defaultPlan = (): WorkoutDay[] => [
   { id: uid(), label: "Day 1 — Push", exercises: [] },
   { id: uid(), label: "Day 2 — Pull", exercises: [] },
   { id: uid(), label: "Day 3 — Legs", exercises: [] },
-];
-
-interface PlanTemplate {
-  id: string;
-  name: string;
-  description: string;
-  level: string;
-  days: number;
-  split: string;
-  daysPlan: { label: string; muscles: string[] }[];
-}
-
-const PLAN_TEMPLATES: PlanTemplate[] = [
-  {
-    id: "ppl",
-    name: "Push / Pull / Legs",
-    description: "كلاسيكي جداً وفعال جداً، مناسب لمعظم الناس",
-    level: "Intermediate",
-    days: 3,
-    split: "PPL",
-    daysPlan: [
-      { label: "Day 1 — Push (Chest/Shoulders/Triceps)", muscles: ["Chest", "Shoulders", "Side Delt", "Front Delt", "Triceps"] },
-      { label: "Day 2 — Pull (Back/Biceps)", muscles: ["Back", "Lats", "Mid Back", "Rear Delt", "Biceps", "Traps"] },
-      { label: "Day 3 — Legs (Quads/Hamstrings/Glutes/Calves)", muscles: ["Quads", "Hamstrings", "Glutes", "Calves", "Abs"] },
-    ],
-  },
-  {
-    id: "fullbody3",
-    name: "Full Body 3x/Week",
-    description: "مثالي للمبتدئين، يركز على كل عضلات الجسم ٣ مرات أسبوعياً",
-    level: "Beginner",
-    days: 3,
-    split: "Full Body",
-    daysPlan: [
-      { label: "Day 1 — Full Body A", muscles: ["Chest", "Back", "Quads", "Shoulders", "Abs"] },
-      { label: "Day 2 — Full Body B", muscles: ["Quads", "Hamstrings", "Glutes", "Back", "Triceps", "Biceps"] },
-      { label: "Day 3 — Full Body C", muscles: ["Chest", "Lats", "Hamstrings", "Shoulders", "Abs", "Calves"] },
-    ],
-  },
-  {
-    id: "upperlower4",
-    name: "Upper / Lower 4x/Week",
-    description: "توازن ممتاز بين الحجم والتعافي، مناسب للمتوسط",
-    level: "Intermediate",
-    days: 4,
-    split: "Upper/Lower",
-    daysPlan: [
-      { label: "Day 1 — Upper Body", muscles: ["Chest", "Back", "Shoulders", "Biceps", "Triceps"] },
-      { label: "Day 2 — Lower Body", muscles: ["Quads", "Hamstrings", "Glutes", "Calves", "Abs"] },
-      { label: "Day 3 — Upper Body Focus", muscles: ["Chest", "Lats", "Rear Delt", "Side Delt", "Biceps", "Triceps"] },
-      { label: "Day 4 — Lower Body Focus", muscles: ["Quads", "Hamstrings", "Glutes", "Calves", "Obliques"] },
-    ],
-  },
-  {
-    id: "fullbody2",
-    name: "Full Body 2x/Week",
-    description: "خفيف جداً، ممتاز لو وقتك ضيق أو لسه مبتدئ",
-    level: "Beginner",
-    days: 2,
-    split: "Full Body",
-    daysPlan: [
-      { label: "Day 1 — Full Body", muscles: ["Chest", "Back", "Quads", "Shoulders", "Triceps", "Biceps", "Abs"] },
-      { label: "Day 2 — Full Body", muscles: ["Hamstrings", "Glutes", "Lats", "Shoulders", "Triceps", "Biceps", "Calves"] },
-    ],
-  },
-  {
-    id: "bro",
-    name: "Classic Bro Split 5x/Week",
-    description: "كل عضلة يوم لوحدها، يركز جداً على كل عضلة",
-    level: "Advanced",
-    days: 5,
-    split: "Body Part",
-    daysPlan: [
-      { label: "Day 1 — Chest", muscles: ["Chest"] },
-      { label: "Day 2 — Back", muscles: ["Back", "Lats", "Mid Back"] },
-      { label: "Day 3 — Shoulders", muscles: ["Shoulders", "Front Delt", "Side Delt", "Rear Delt", "Traps"] },
-      { label: "Day 4 — Arms", muscles: ["Biceps", "Triceps", "Forearms"] },
-      { label: "Day 5 — Legs", muscles: ["Quads", "Hamstrings", "Glutes", "Calves"] },
-    ],
-  },
-  {
-    id: "pplx2",
-    name: "PPL ×2 — 6x/Week",
-    description: "PPL مرتين في الأسبوع — حجم تدريب عالي جداً للجدعين",
-    level: "Advanced",
-    days: 6,
-    split: "PPL ×2",
-    daysPlan: [
-      { label: "Day 1 — Push A", muscles: ["Chest", "Shoulders", "Triceps"] },
-      { label: "Day 2 — Pull A", muscles: ["Back", "Lats", "Biceps"] },
-      { label: "Day 3 — Legs A", muscles: ["Quads", "Hamstrings", "Calves"] },
-      { label: "Day 4 — Push B", muscles: ["Chest", "Side Delt", "Triceps"] },
-      { label: "Day 5 — Pull B", muscles: ["Lats", "Mid Back", "Rear Delt", "Biceps"] },
-      { label: "Day 6 — Legs B", muscles: ["Quads", "Glutes", "Hamstrings", "Calves", "Abs"] },
-    ],
-  },
-  {
-    id: "phul",
-    name: "PHUL — Power & Hypertrophy",
-    description: "يومان قوة (أوزان تقيلة) + يومين ضخامات، توازن ممتاز",
-    level: "Intermediate",
-    days: 4,
-    split: "Power/Hypertrophy",
-    daysPlan: [
-      { label: "Day 1 — Upper Power", muscles: ["Chest", "Back", "Shoulders", "Triceps"] },
-      { label: "Day 2 — Lower Power", muscles: ["Quads", "Hamstrings", "Calves"] },
-      { label: "Day 3 — Upper Hypertrophy", muscles: ["Chest", "Lats", "Side Delt", "Biceps", "Triceps"] },
-      { label: "Day 4 — Lower Hypertrophy", muscles: ["Quads", "Hamstrings", "Glutes", "Calves", "Abs"] },
-    ],
-  },
-  {
-    id: "arnold",
-    name: "Arnold Split — 6x/Week",
-    description: "الكلاسيك الذهبية: صدر/ضهر، كتف/باي/تراي، رجلين × مرتين",
-    level: "Advanced",
-    days: 6,
-    split: "Arnold",
-    daysPlan: [
-      { label: "Day 1 — Chest & Back", muscles: ["Chest", "Back", "Lats"] },
-      { label: "Day 2 — Shoulders & Arms", muscles: ["Shoulders", "Biceps", "Triceps", "Traps"] },
-      { label: "Day 3 — Legs", muscles: ["Quads", "Hamstrings", "Glutes", "Calves"] },
-      { label: "Day 4 — Chest & Back", muscles: ["Chest", "Lats", "Mid Back"] },
-      { label: "Day 5 — Shoulders & Arms", muscles: ["Shoulders", "Side Delt", "Biceps", "Triceps", "Forearms"] },
-      { label: "Day 6 — Legs", muscles: ["Quads", "Hamstrings", "Calves", "Abs"] },
-    ],
-  },
-  {
-    id: "strength5",
-    name: "5×5 Strength — 3x/Week",
-    description: "خطة قوة كلاسيكية، مركّزة على الأساسيات بأوزان تقيلة",
-    level: "Intermediate",
-    days: 3,
-    split: "A/B/C",
-    daysPlan: [
-      { label: "Day A — Squat Focus", muscles: ["Quads", "Chest", "Back"] },
-      { label: "Day B — Bench Focus", muscles: ["Chest", "Shoulders", "Hamstrings"] },
-      { label: "Day C — Deadlift Focus", muscles: ["Hamstrings", "Back", "Calves"] },
-    ],
-  },
-  {
-    id: "home",
-    name: "Home Dumbbell Plan",
-    description: "كل حاجاتها دمبل أو وزن الجسم — تتمرن بالبيت براحتك",
-    level: "Beginner",
-    days: 3,
-    split: "Home",
-    daysPlan: [
-      { label: "Day 1 — Push (Home)", muscles: ["Chest", "Shoulders", "Triceps"] },
-      { label: "Day 2 — Pull (Home)", muscles: ["Back", "Biceps", "Rear Delt"] },
-      { label: "Day 3 — Legs & Core (Home)", muscles: ["Quads", "Glutes", "Calves", "Abs"] },
-    ],
-  },
-  {
-    id: "cali",
-    name: "Calisthenics 3x/Week",
-    description: "وزن الجسم بس — قوة وتحكم من غير حد دمبل",
-    level: "Beginner",
-    days: 3,
-    split: "Bodyweight",
-    daysPlan: [
-      { label: "Day 1 — Upper Push", muscles: ["Chest", "Triceps", "Shoulders"] },
-      { label: "Day 2 — Upper Pull", muscles: ["Back", "Lats", "Biceps"] },
-      { label: "Day 3 — Core & Legs", muscles: ["Abs", "Quads", "Calves"] },
-    ],
-  },
 ];
 
 const buildEx = (lib: Omit<Exercise, "id">): Exercise => ({ ...lib, id: uid() });
@@ -774,15 +550,20 @@ const App: React.FC = () => {
   };
 
   const applyTemplate = (template: PlanTemplate) => {
-    const newDays: WorkoutDay[] = template.daysPlan.map(dp => {
-      const picks = EXERCISE_LIBRARY.filter(e => dp.muscles.some(m => e.muscle.toLowerCase().includes(m.toLowerCase()) || m.toLowerCase().includes(e.muscle.toLowerCase())));
-      const selected = picks.slice(0, template.days <= 3 ? 5 : 4);
-      const exs = selected.map(p => buildEx(p));
-      return { id: uid(), label: dp.label, exercises: exs };
-    });
+    // A1: مولّد جديد — تطبيع عضلات صريح + round-robin + compound أولًا + فلترة مستوى/معدات
+    const equipment = profile?.equipment ?? ["Full Gym"];
+    const level = profile?.level ?? "Intermediate";
+    const built = buildPlanFromTemplate(template, EXERCISE_LIBRARY, equipment, level);
+    const newDays: WorkoutDay[] = built.map(b => ({ id: uid(), label: b.label, exercises: b.exercises }));
+    const incomplete = built.filter(b => !b.complete).length;
     savePlan(newDays);
     setExpandedDay(newDays[0]?.id || null);
     setCurrentPage("Home");
+    if (incomplete > 0) {
+      setToast(incomplete === 1
+        ? "الخطة اتطبّقت — يوم واحد مش اكتمل بالكامل، ممكن تضيف تمارين يدويًا"
+        : `الخطة اتطبّقت — ${incomplete} أيام مش اكتملت بالكامل، ممكن تضيف تمارين يدويًا`);
+    }
   };
 
   const addDay = () => {
