@@ -5,6 +5,7 @@
  */
 
 import { Suspense, lazy, useEffect, useState } from "react";
+import { Skeleton } from "./components/ui/primitives";
 import { Onboarding } from "./components/Onboarding";
 import { HomeTab } from "./components/HomeTab";
 /* D: تابات أقل استخدامًا — chunks مستقلة تتنزّل عند أول فتح */
@@ -206,7 +207,16 @@ export default function App() {
     );
   }
 
-  /* ===== التابات ===== */
+  const tabFall = (
+  <div className="tab-loading" role="status" aria-label="جاري التحميل">
+    <Skeleton h={26} w="55%" className="sk-title" />
+    <Skeleton h={64} w="100%" className="sk-row" />
+    <Skeleton h={64} w="100%" className="sk-row" />
+    <Skeleton h={64} w="100%" className="sk-row" />
+  </div>
+);
+
+/* ===== التابات ===== */
   return (
     <div className="app" dir={currentPage === "Schedule" || currentPage === "Progress" ? "rtl" : undefined}>
       {currentPage === "Home" && (
@@ -222,7 +232,7 @@ export default function App() {
         />
       )}
       {currentPage === "Schedule" && (
-        <Suspense fallback={<div className="tab-loading">...جاي</div>}>
+        <Suspense fallback={tabFall}>
           <ScheduleTab
             profile={profile}
             setPlan={savePlan}
@@ -233,7 +243,7 @@ export default function App() {
         </Suspense>
       )}
       {currentPage === "Progress" && (
-        <Suspense fallback={<div className="tab-loading">...جاي</div>}>
+        <Suspense fallback={tabFall}>
           <ProgressTab
             logs={logs}
             profile={profile}
@@ -245,7 +255,7 @@ export default function App() {
         </Suspense>
       )}
       {currentPage === "AI" && (
-        <Suspense fallback={<div className="tab-loading">...جاي</div>}>
+        <Suspense fallback={tabFall}>
           <AITab />
         </Suspense>
       )}

@@ -2,7 +2,7 @@
 
 export type Page = "Home" | "Schedule" | "Progress" | "AI";
 
-export type ThemeKey = "mono" | "emerald" | "orange" | "violet" | "cyan" | "rose";
+export type ThemeKey = "mono" | "emerald" | "orange" | "violet" | "cyan" | "rose" | "light" | "amoled";
 
 /** المعدّات اللي ممكن حركة تحتاجها (بالإنجليزي كقيم داخلية، العرض بالعربي في strings.ts) */
 export type Equipment =

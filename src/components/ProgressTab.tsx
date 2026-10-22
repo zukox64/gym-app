@@ -5,6 +5,7 @@
 import * as React from "react";
 import { useMemo, useState } from "react";
 import { PaletteIcon, TrashIcon } from "./icons";
+import { EmptyState } from "./ui/primitives";
 import { ExerciseThumb } from "./ExerciseThumb";
 import { fmtClock, fmtDate, monthLabel, monthMeta, todayKey } from "../lib/date";
 import { fmtVolume, unitOf } from "../lib/units";
@@ -214,8 +215,7 @@ export const ProgressTab: React.FC<ProgressTabProps> = ({ logs, profile, onDelet
           </select>
           {history.length === 0 ? (
             <p className="day-empty">{S.progress.noSessions}</p>
-          ) : (
-            <div className="ex-history-list">
+          ) : (            <div className="ex-history-list">
               {history.map(h => (
                 <div key={h.date} className="ex-history-row">
                   <span className="ex-history-date">{fmtDate(h.date)}</span>
@@ -234,7 +234,7 @@ export const ProgressTab: React.FC<ProgressTabProps> = ({ logs, profile, onDelet
         <div className="card">
           <h3 className="card-title">{S.progress.prTitle}</h3>
           {prList.length === 0 ? (
-            <p className="day-empty">{S.progress.prEmpty}</p>
+            <EmptyState kind="trophy" title={S.progress.prTitle} sub={S.progress.prEmpty} />
           ) : (
             <div className="pr-list">
               {prList.map(([name, w]) => (
@@ -257,7 +257,7 @@ export const ProgressTab: React.FC<ProgressTabProps> = ({ logs, profile, onDelet
             <button className="btn-save body-save" onClick={saveBody}>{S.progress.save}</button>
           </div>
           {body.length === 0 ? (
-            <p className="day-empty">{S.progress.bodyEmpty}</p>
+            <EmptyState kind="scale" title={S.progress.bodyTitle} sub={S.progress.bodyEmpty} />
           ) : (
             <div className="body-points">
               {body.slice(0, 8).map(p => (
@@ -274,7 +274,7 @@ export const ProgressTab: React.FC<ProgressTabProps> = ({ logs, profile, onDelet
         <div className="card">
           <h3 className="card-title">آخر التمارين</h3>
           {logs.length === 0 ? (
-            <p className="day-empty">لسه مسجلتش تمرين — افتح يوم واضغط «خلصت التمرين».</p>
+            <EmptyState kind="calendar" title={S.progress.emptyRecent} sub="افتح يوم من «تماريني» واضغط «خلصت التمرين» وبنوب عليه." />
           ) : (
             <div className="recent-list">
               {logs.slice(0, 6).map(l => (

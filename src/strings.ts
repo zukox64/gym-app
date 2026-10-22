@@ -103,6 +103,7 @@ export const S = {
     bodyEmpty: "سجّل وزنك الأول — وتتتبخط هنا",
     // B7
     confirmDel: "متأكد؟ اضغط تاني",
+    emptyRecent: "لسه مسجلتش تمرين",
   },
 
   session: {
