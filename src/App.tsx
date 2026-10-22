@@ -166,6 +166,47 @@ const THEMES: { key: ThemeKey; label: string; swatch: string }[] = [
 /* ===== Workout logging ===== */
 const LOG_KEY = "gym-logs-v1";
 
+const SESSION_KEY = "gym-session-v1";
+const REST_SECONDS = 90;
+
+/** يقفل الراحة الجارية (لو شغالة) ويجمّع ثوانيها في restSec — حسابات طوابع زمنية (نقية) */
+const closeRest = (s: SessionState, at?: number): SessionState => {
+  if (!s.restEndsAt) return s;
+  const now = at ?? Date.now();
+  const spent = Math.max(0, Math.round((Math.min(now, s.restEndsAt) - (s.restStartedAt ?? s.restEndsAt)) / 1000));
+  return { ...s, restSec: s.restSec + spent, restEndsAt: null, restStartedAt: null };
+};
+
+/** استعادة السيشن من التخزين مع فاليديشن بسيطة — داتا فاسدة ⇒ تجاهل (A3) */
+const restoreSession = (): SessionState | null => {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const v: unknown = JSON.parse(raw);
+    if (!v || typeof v !== "object") return null;
+    const r = v as Partial<SessionState>;
+    if (
+      typeof r.dayId !== "string" ||
+      typeof r.label !== "string" ||
+      typeof r.startedAt !== "number" ||
+      typeof r.currentIdx !== "number" ||
+      !Array.isArray(r.items)
+    ) return null;
+    return {
+      dayId: r.dayId,
+      label: r.label,
+      startedAt: r.startedAt,
+      restSec: typeof r.restSec === "number" ? r.restSec : 0,
+      items: r.items.filter(it => !!it && typeof it.name === "string"),
+      currentIdx: r.currentIdx,
+      restEndsAt: typeof r.restEndsAt === "number" ? r.restEndsAt : null,
+      restStartedAt: typeof r.restStartedAt === "number" ? r.restStartedAt : null,
+    };
+  } catch {
+    return null;
+  }
+};
+
 const todayKey = (d = new Date()) => {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -400,8 +441,8 @@ const App: React.FC = () => {
   const [editWeight, setEditWeight] = useState(0);
   const [dayToFinish, setDayToFinish] = useState<WorkoutDay | null>(null);
   const [finishWeights, setFinishWeights] = useState<Record<string, number>>({});
-  const [session, setSession] = useState<SessionState | null>(null);
-  const [nowTime, setNowTime] = useState(Date.now());
+  const [session, setSession] = useState<SessionState | null>(() => restoreSession());
+  const [nowTime, setNowTime] = useState(() => Date.now());
   const [showDayPicker, setShowDayPicker] = useState(false);
   const [tplFilter, setTplFilter] = useState("All");
   const [calMonth, setCalMonth] = useState(() => {
@@ -449,8 +490,7 @@ const App: React.FC = () => {
       const l = localStorage.getItem(LOG_KEY);
       if (l) setLogs(JSON.parse(l));
     } catch { /* ignore */ }
-    // A3: استعادة السيشن الحية بعد الريفرش — مع فاليديشن уровة الشكل والمجوّد المخزّن فاشل نرمي
-    setSession(restoreSession());
+    // A3: السيشن بيتريستور من useState initializer — مش من هنا (StrictMode بيستوفر double-effects)
   }, []);
 
   // A3: حفظ السيشن الحية وكل تغييرها، ومسحها لما تخلص/تتلغي
@@ -462,48 +502,6 @@ const App: React.FC = () => {
   }, [session]);
 
   const savePlan = (d: WorkoutDay[]) => { setDays(d); localStorage.setItem(PLAN_KEY, JSON.stringify(d)); };
-
-  /* ===== A3: السيشن الحية ===== */
-  const SESSION_KEY = "gym-session-v1";
-  const REST_SECONDS = 90;
-
-  /** يقفل الراحة الجارية (لو شغالة) ويجمّع ثوانيها في restSec — حسابات طوابع زمنية */
-  const closeRest = (s: SessionState, at?: number): SessionState => {
-    if (!s.restEndsAt) return s;
-    const now = at ?? Date.now();
-    const spent = Math.max(0, Math.round((Math.min(now, s.restEndsAt) - (s.restStartedAt ?? s.restEndsAt)) / 1000));
-    return { ...s, restSec: s.restSec + spent, restEndsAt: null, restStartedAt: null };
-  };
-
-  /** استعادة السيشن من التخزين مع فاليديشن بسيطة — داتا فاسدة ⇒ تجاهل */
-  const restoreSession = (): SessionState | null => {
-    try {
-      const raw = localStorage.getItem(SESSION_KEY);
-      if (!raw) return null;
-      const v: unknown = JSON.parse(raw);
-      if (!v || typeof v !== "object") return null;
-      const r = v as Partial<SessionState>;
-      if (
-        typeof r.dayId !== "string" ||
-        typeof r.label !== "string" ||
-        typeof r.startedAt !== "number" ||
-        typeof r.currentIdx !== "number" ||
-        !Array.isArray(r.items)
-      ) return null;
-      return {
-        dayId: r.dayId,
-        label: r.label,
-        startedAt: r.startedAt,
-        restSec: typeof r.restSec === "number" ? r.restSec : 0,
-        items: r.items.filter(it => it && typeof it.name === "string"),
-        currentIdx: r.currentIdx,
-        restEndsAt: typeof r.restEndsAt === "number" ? r.restEndsAt : null,
-        restStartedAt: typeof r.restStartedAt === "number" ? r.restStartedAt : null,
-      };
-    } catch {
-      return null;
-    }
-  };
 
   const toggleEquipment = (item: string) =>
     setEquipment(p => p.includes(item) ? p.filter(i => i !== item) : [...p, item]);
