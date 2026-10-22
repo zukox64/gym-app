@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-type Page = "Home" | "Schedule" | "Nutrition" | "AI";
+type Page = "Home" | "Schedule" | "Progress" | "AI";
 
 interface UserProfile {
   name: string;
@@ -23,6 +23,7 @@ interface Exercise {
   icon: string;
   sets: number;
   reps: number;
+  weight?: number;
 }
 
 interface WorkoutDay {
@@ -95,42 +96,87 @@ const uid = () => Math.random().toString(36).slice(2, 10);
 const STORAGE_KEY = "gym-profile-v2";
 const PLAN_KEY = "gym-plan-v2";
 
-const EXERCISE_IMAGES: Record<string, string> = {
-  "Barbell Bench Press": "Barbell_Bench_Press_-_Medium_Grip/0.jpg",
-  "Incline Dumbbell Press": "Incline_Dumbbell_Press/0.jpg",
-  "Cable Fly": "Flat_Bench_Cable_Flyes/0.jpg",
-  "Push-ups": "Pushups/0.jpg",
-  "Dumbbell Rows": "Bent_Over_Two-Dumbbell_Row/0.jpg",
-  "Lat Pulldown": "Wide-Grip_Lat_Pulldown/0.jpg",
-  "Pull-ups": "Pullups/0.jpg",
-  "Seated Cable Row": "Seated_Cable_Rows/0.jpg",
-  "Overhead Press": "Standing_Military_Press/0.jpg",
-  "Lateral Raise": "Side_Lateral_Raise/0.jpg",
-  "Front Raise": "Front_Dumbbell_Raise/0.jpg",
-  "Face Pull": "Face_Pull/0.jpg",
-  "Barbell Curl": "Barbell_Curl/0.jpg",
-  "Hammer Curl": "Hammer_Curls/0.jpg",
-  "Preacher Curl": "Preacher_Curl/0.jpg",
-  "Tricep Pushdown": "Triceps_Pushdown/0.jpg",
-  "Skull Crushers": "EZ-Bar_Skullcrusher/0.jpg",
-  "Overhead Extension": "Cable_Rope_Overhead_Triceps_Extension/0.jpg",
-  "Barbell Squat": "Barbell_Squat/0.jpg",
-  "Leg Press": "Leg_Press/0.jpg",
-  "Leg Extension": "Leg_Extensions/0.jpg",
-  "Romanian Deadlift": "Romanian_Deadlift/0.jpg",
-  "Leg Curl": "Lying_Leg_Curls/0.jpg",
-  "Hip Thrust": "Barbell_Hip_Thrust/0.jpg",
-  "Bulgarian Split Squat": "Split_Squat_with_Dumbbells/0.jpg",
-  "Calf Raise": "Standing_Calf_Raises/0.jpg",
-  "Crunches": "Crunches/0.jpg",
-  "Hanging Leg Raise": "Hanging_Leg_Raise/0.jpg",
-  "Plank": "Plank/0.jpg",
-  "Russian Twist": "Russian_Twist/0.jpg",
-  "Farmer's Walk": "Farmers_Walk/0.jpg",
-  "Barbell Shrug": "Barbell_Shrug/0.jpg",
+/* ===== Anatomical muscle diagrams (wger, open source) =====
+   كل صورة = جسم تشريحي رمادي + العضلة المستهدفة بالأحمر (بنعمل zoom على العضلة) */
+const MUSCLE_IMG_BASE = "https://wger.de/static/images/muscles/";
+const BODY_IMG = {
+  front: MUSCLE_IMG_BASE + "muscular_system_front.svg",
+  back: MUSCLE_IMG_BASE + "muscular_system_back.svg",
 };
 
-const IMG_BASE = "https://cdn.jsdelivr.net/gh/yuhonas/free-exercise-db@main/exercises/";
+interface MuscleArt { f: string; x: number; y: number; z: number; back?: boolean }
+
+const MUSCLE_IMG: Record<string, MuscleArt> = {
+  Chest: { f: "main/muscle-4.c9fa9a228bc8.svg", x: 50, y: 25, z: 2.6 },
+  Back: { f: "main/muscle-12.6a5de7a0e373.svg", x: 50, y: 34, z: 2.2, back: true },
+  Lats: { f: "main/muscle-12.6a5de7a0e373.svg", x: 50, y: 34, z: 2.2, back: true },
+  "Mid Back": { f: "main/muscle-12.6a5de7a0e373.svg", x: 50, y: 34, z: 2.2, back: true },
+  "Lower Back": { f: "main/muscle-9.b491050a7108.svg", x: 50, y: 30, z: 2.1, back: true },
+  Shoulders: { f: "main/muscle-2.e1e1205a3202.svg", x: 57, y: 24, z: 2.4 },
+  "Side Delt": { f: "main/muscle-2.e1e1205a3202.svg", x: 57, y: 24, z: 2.4 },
+  "Front Delt": { f: "main/muscle-2.e1e1205a3202.svg", x: 57, y: 24, z: 2.4 },
+  "Rear Delt": { f: "main/muscle-2.e1e1205a3202.svg", x: 57, y: 24, z: 2.4, back: true },
+  Biceps: { f: "main/muscle-1.8790f8a0b3b9.svg", x: 60, y: 31, z: 2.4 },
+  Triceps: { f: "main/muscle-5.8a2b934b5486.svg", x: 60, y: 31, z: 2.4, back: true },
+  Forearms: { f: "main/muscle-13.3fd85231b089.svg", x: 59, y: 32, z: 2.5 },
+  Quads: { f: "main/muscle-10.b1445ea1acf6.svg", x: 50, y: 60, z: 2.1 },
+  Hamstrings: { f: "main/muscle-11.54ef31755917.svg", x: 50, y: 66, z: 2.1, back: true },
+  Glutes: { f: "main/muscle-8.fbdfb46f3bc0.svg", x: 50, y: 54, z: 2.0, back: true },
+  Calves: { f: "main/muscle-7.edbd8c381b0c.svg", x: 50, y: 84, z: 1.9, back: true },
+  Abs: { f: "main/muscle-6.592f938fa8c7.svg", x: 50, y: 41, z: 2.3 },
+  "Upper Abs": { f: "main/muscle-6.592f938fa8c7.svg", x: 50, y: 39, z: 2.4 },
+  "Lower Abs": { f: "main/muscle-6.592f938fa8c7.svg", x: 50, y: 44, z: 2.4 },
+  Obliques: { f: "main/muscle-14.153978038d0b.svg", x: 50, y: 40, z: 2.3 },
+  Traps: { f: "main/muscle-9.b491050a7108.svg", x: 50, y: 22, z: 2.2, back: true },
+};
+
+/* ===== Themes ===== */
+type ThemeKey = "emerald" | "orange" | "violet" | "cyan" | "rose";
+const THEME_KEY = "gym-theme-v1";
+const THEMES: { key: ThemeKey; label: string; swatch: string }[] = [
+  { key: "emerald", label: "Emerald", swatch: "#22c55e" },
+  { key: "orange", label: "Sunset", swatch: "#f97316" },
+  { key: "violet", label: "Violet", swatch: "#8b5cf6" },
+  { key: "cyan", label: "Ice", swatch: "#06b6d4" },
+  { key: "rose", label: "Rose", swatch: "#f43f5e" },
+];
+
+/* ===== Workout logging ===== */
+const LOG_KEY = "gym-logs-v1";
+
+interface LoggedExercise {
+  name: string;
+  muscle: string;
+  sets: number;
+  reps: number;
+  weight: number;
+}
+interface WorkoutLog {
+  id: string;
+  date: string;
+  dayId: string;
+  dayLabel: string;
+  exercises: LoggedExercise[];
+  volume: number;
+}
+
+const todayKey = (d = new Date()) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+
+const AR_MONTHS = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+
+const monthLabel = (y: number, m: number) => `${AR_MONTHS[m]} ${y}`;
+
+const fmtDate = (iso: string) => {
+  const parts = iso.split("-").map(Number);
+  const d = parts[2] || 1;
+  const m = (parts[1] || 1) - 1;
+  return `${d} ${AR_MONTHS[m]}`;
+};
 
 const defaultPlan = (): WorkoutDay[] => [
   { id: uid(), label: "Day 1 — Push", exercises: [] },
@@ -294,11 +340,33 @@ const ChatIcon: React.FC<IconProps> = ({ size = 20 }) => (
   </svg>
 );
 
-const ExerciseThumb: React.FC<{ name: string; muscle: string; size?: number }> = ({ name, muscle, size = 40 }) => {
-  const [failed, setFailed] = useState(false);
-  const path = EXERCISE_IMAGES[name];
+const DumbbellIcon: React.FC<IconProps> = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6.5 6.5v11M3 9v6M17.5 6.5v11M21 9v6M6.5 12h11" />
+  </svg>
+);
 
-  if (!path || failed) {
+const PaletteIcon: React.FC<IconProps> = ({ size = 18 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <circle cx="8" cy="10" r="1" fill="currentColor" />
+    <circle cx="12" cy="7.5" r="1" fill="currentColor" />
+    <circle cx="16" cy="10" r="1" fill="currentColor" />
+    <path d="M12 22a4 4 0 0 1 0-8 3 3 0 0 0 0-6" opacity=".5" />
+  </svg>
+);
+
+const CheckIcon: React.FC<IconProps> = ({ size = 18 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+
+const ExerciseThumb: React.FC<{ name: string; muscle: string; size?: number }> = ({ name, muscle, size = 46 }) => {
+  const [failed, setFailed] = useState(false);
+  const art = MUSCLE_IMG[muscle];
+
+  if (!art || failed) {
     return (
       <div className="ex-icon ex-icon-fallback" style={{ width: size, height: size }}>
         {MUSCLE_ICONS[muscle] || "🏋️"}
@@ -307,8 +375,14 @@ const ExerciseThumb: React.FC<{ name: string; muscle: string; size?: number }> =
   }
 
   return (
-    <div className="ex-thumb" style={{ width: size, height: size }}>
-      <img src={IMG_BASE + path} alt={name} loading="lazy" decoding="async" onError={() => setFailed(true)} />
+    <div className="ex-thumb" style={{ width: size, height: size }} title={name}>
+      <div
+        className="ex-thumb-zoom"
+        style={{ transform: `scale(${art.z})`, transformOrigin: `${art.x}% ${art.y}%` }}
+      >
+        <img className="ex-art-body" src={art.back ? BODY_IMG.back : BODY_IMG.front} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} />
+        <img className="ex-art-muscle" src={MUSCLE_IMG_BASE + art.f} alt={name} loading="lazy" decoding="async" onError={() => setFailed(true)} />
+      </div>
     </div>
   );
 };
@@ -316,22 +390,23 @@ const ExerciseThumb: React.FC<{ name: string; muscle: string; size?: number }> =
 const navItems: { page: Page; Icon: React.FC<IconProps> }[] = [
   { page: "Home", Icon: GridIcon },
   { page: "Schedule", Icon: CalendarIcon },
-  { page: "Nutrition", Icon: BarChartIcon },
+  { page: "Progress", Icon: BarChartIcon },
   { page: "AI", Icon: ChatIcon },
 ];
 
-const placeholderPages: Record<Page, string> = {
-  Nutrition: "Nutrition Page",
-  Home: "Home",
-  Schedule: "Schedule Page",
-  AI: "AI Assistant",
-};
-
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>("Home");
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [hasProfile, setHasProfile] = useState(false);
+  const [profile, setProfile] = useState<UserProfile | null>(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  });
+  const [hasProfile, setHasProfile] = useState(() => {
+    try { return !!localStorage.getItem(STORAGE_KEY); } catch { return false; }
+  });
   const [editingProfile, setEditingProfile] = useState(false);
+  const [showIntro, setShowIntro] = useState(true);
 
   const [obStep, setObStep] = useState(1);
   const [obName, setObName] = useState("");
@@ -360,6 +435,31 @@ const App: React.FC = () => {
   const [renamingDay, setRenamingDay] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
 
+  const [theme, setTheme] = useState<ThemeKey>(() => {
+    try { return (localStorage.getItem(THEME_KEY) as ThemeKey) || "emerald"; } catch { return "emerald"; }
+  });
+  const [logs, setLogs] = useState<WorkoutLog[]>([]);
+  const [showTheme, setShowTheme] = useState(false);
+  const [toast, setToast] = useState("");
+  const [editWeight, setEditWeight] = useState(0);
+  const [dayToFinish, setDayToFinish] = useState<WorkoutDay | null>(null);
+  const [finishWeights, setFinishWeights] = useState<Record<string, number>>({});
+  const [calMonth, setCalMonth] = useState(() => {
+    const d = new Date();
+    return { y: d.getFullYear(), m: d.getMonth() };
+  });
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try { localStorage.setItem(THEME_KEY, theme); } catch { /* ignore */ }
+  }, [theme]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = window.setTimeout(() => setToast(""), 2600);
+    return () => window.clearTimeout(t);
+  }, [toast]);
+
   useEffect(() => {
     try {
       const p = localStorage.getItem(STORAGE_KEY);
@@ -368,6 +468,10 @@ const App: React.FC = () => {
     try {
       const d = localStorage.getItem(PLAN_KEY);
       if (d) setDays(JSON.parse(d));
+    } catch { /* ignore */ }
+    try {
+      const l = localStorage.getItem(LOG_KEY);
+      if (l) setLogs(JSON.parse(l));
     } catch { /* ignore */ }
   }, []);
 
@@ -432,7 +536,7 @@ const App: React.FC = () => {
     if (!editingExercise) return;
     setDays(prev => {
       const next = prev.map(d => d.id === editingExercise.dayId
-        ? { ...d, exercises: d.exercises.map(e => e.id === editingExercise.ex.id ? { ...e, sets: editSets, reps: editReps } : e) }
+        ? { ...d, exercises: d.exercises.map(e => e.id === editingExercise.ex.id ? { ...e, sets: editSets, reps: editReps, weight: editWeight } : e) }
         : d);
       localStorage.setItem(PLAN_KEY, JSON.stringify(next));
       return next;
@@ -473,6 +577,89 @@ const App: React.FC = () => {
     setRenamingDay(null);
   };
 
+  /* ===== Logging ===== */
+  const saveLogs = (next: WorkoutLog[]) => {
+    setLogs(next);
+    try { localStorage.setItem(LOG_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+  };
+
+  const openFinish = (day: WorkoutDay) => {
+    const w: Record<string, number> = {};
+    day.exercises.forEach(e => { w[e.id] = e.weight || 0; });
+    setFinishWeights(w);
+    setDayToFinish(day);
+  };
+
+  const finishDay = () => {
+    if (!dayToFinish) return;
+    const logged: LoggedExercise[] = dayToFinish.exercises.map(e => ({
+      name: e.name, muscle: e.muscle, sets: e.sets, reps: e.reps, weight: finishWeights[e.id] || 0,
+    }));
+    const volume = logged.reduce((s, e) => s + e.sets * e.reps * e.weight, 0);
+    const entry: WorkoutLog = {
+      id: uid(), date: todayKey(), dayId: dayToFinish.id,
+      dayLabel: dayToFinish.label, exercises: logged, volume,
+    };
+    saveLogs([entry, ...logs]);
+
+    // الصق الأوزان الجديدة في الخطة
+    savePlan(days.map(d => d.id === dayToFinish.id
+      ? { ...d, exercises: d.exercises.map(e => ({ ...e, weight: finishWeights[e.id] || 0 })) }
+      : d));
+
+    setDayToFinish(null);
+    setToast("تم تسجيل التمرين 💪");
+  };
+
+  /* ===== Stats ===== */
+  const monthLogs = logs.filter(l => {
+    const [y, m] = l.date.split("-").map(Number);
+    return y === calMonth.y && m - 1 === calMonth.m;
+  });
+  const prevRef = new Date(calMonth.y, calMonth.m - 1, 1);
+  const prevLogs = logs.filter(l => {
+    const [y, m] = l.date.split("-").map(Number);
+    return y === prevRef.getFullYear() && m - 1 === prevRef.getMonth();
+  });
+  const monthVolume = monthLogs.reduce((s, l) => s + l.volume, 0);
+  const prevVolume = prevLogs.reduce((s, l) => s + l.volume, 0);
+  const volumeDelta = prevVolume > 0 ? Math.round(((monthVolume - prevVolume) / prevVolume) * 100) : null;
+  const weekBuckets = [0, 1, 2, 3, 4].map(w =>
+    monthLogs.filter(l => Math.min(4, Math.floor((Number(l.date.slice(8, 10)) - 1) / 7)) === w)
+      .reduce((s, l) => s + l.volume, 0)
+  );
+  const maxWeek = Math.max(1, ...weekBuckets);
+  const loggedDates = new Set(monthLogs.map(l => l.date));
+  const streak = (() => {
+    let count = 0;
+    const d = new Date();
+    if (!new Set(logs.map(l => l.date)).has(todayKey(d))) d.setDate(d.getDate() - 1);
+    const all = new Set(logs.map(l => l.date));
+    while (all.has(todayKey(d))) { count++; d.setDate(d.getDate() - 1); }
+    return count;
+  })();
+  const firstDow = new Date(calMonth.y, calMonth.m, 1).getDay();
+  const daysInMonth = new Date(calMonth.y, calMonth.m + 1, 0).getDate();
+  const shiftMonth = (delta: number) => {
+    setCalMonth(prev => {
+      const d = new Date(prev.y, prev.m + delta, 1);
+      return { y: d.getFullYear(), m: d.getMonth() };
+    });
+  };
+
+  const bestLog = monthLogs.reduce<WorkoutLog | null>((best, l) => (!best || l.volume > best.volume ? l : best), null);
+  const favoriteExercise = (() => {
+    const counts: Record<string, number> = {};
+    monthLogs.forEach(l => l.exercises.forEach(e => { counts[e.name] = (counts[e.name] || 0) + 1; }));
+    const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+    return top ? top[0] : "";
+  })();
+  const finishTotal = dayToFinish
+    ? dayToFinish.exercises.reduce((s, e) => s + e.sets * e.reps * (finishWeights[e.id] || 0), 0)
+    : 0;
+  const unit = profile?.weightUnit || "kg";
+  const fmtVolume = (v: number) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : `${Math.round(v)}`;
+
   const filteredLibrary = EXERCISE_LIBRARY.filter(e => {
     if (pickerFilter !== "All" && e.muscle !== pickerFilter) return false;
     if (pickerSearch && !e.name.toLowerCase().includes(pickerSearch.toLowerCase())) return false;
@@ -482,6 +669,45 @@ const App: React.FC = () => {
   const muscleFilters = ["All", ...Array.from(new Set(EXERCISE_LIBRARY.map(e => e.muscle)))];
 
   const totalExercises = days.reduce((s, d) => s + d.exercises.length, 0);
+
+  // ===== Intro / Start screen =====
+  if (!hasProfile && !editingProfile && showIntro) {
+    return (
+      <div className="hero" dir="rtl">
+        <div className="hero-orb hero-orb-1" />
+        <div className="hero-orb hero-orb-2" />
+        <div className="hero-inner">
+          <div className="hero-badge">
+            <span className="hero-badge-dot" />
+            مدربك الشخصي في جيبك
+          </div>
+
+          <h1 className="hero-title">
+            شيل تقيل،<br />
+            <span className="hero-title-accent">وكبّر كل شهر.</span>
+          </h1>
+
+          <p className="hero-sub">
+            خطط جاهزة تطبقها بضغطة، تتبّع لكل كيلو شلته، وتقرير شهري
+            يوريك بالفلوس قد إيه اتطورت.
+          </p>
+
+          <div className="hero-chips">
+            <div className="hero-chip"><strong>32</strong><span>تمرين</span></div>
+            <div className="hero-chip"><strong>5</strong><span>خطط جاهزة</span></div>
+            <div className="hero-chip"><strong>∞</strong><span>تتبع شهري</span></div>
+          </div>
+
+          <button className="hero-cta" onClick={() => setShowIntro(false)}>
+            <DumbbellIcon size={20} />
+            يلا نبدأ
+          </button>
+
+          <p className="hero-foot">مجاني · بدون إعلانات · بياناتك محفوظة على جهازك</p>
+        </div>
+      </div>
+    );
+  }
 
   // ===== Onboarding =====
   if (editingProfile || !hasProfile) {
@@ -604,10 +830,50 @@ const App: React.FC = () => {
   }
 
   // ===== Main App =====
-  if (currentPage !== "Home") {
-    if (currentPage === "Schedule") {
-      return (
-        <div className="app">
+  const navBar = (
+    <nav className="bottom-nav" dir="ltr">
+      <div className="nav-inner">
+        {navItems.map(({ page, Icon }) => (
+          <button key={page} onClick={() => setCurrentPage(page)}
+            className={`nav-item ${currentPage === page ? "nav-active" : "nav-inactive"}`}>
+            <span className={`nav-icon-wrap ${currentPage === page ? "nav-icon-active" : ""}`}><Icon size={20} /></span>
+          </button>
+        ))}
+      </div>
+    </nav>
+  );
+
+  const themeModal = showTheme ? (
+    <div className="modal-overlay">
+      <div className="modal-backdrop" onClick={() => setShowTheme(false)} />
+      <div className="modal-sheet theme-sheet" dir="rtl">
+        <div className="modal-header">
+          <div>
+            <h3 className="modal-title">اختار ثيمك</h3>
+            <p className="modal-sub">اللون بيتغيّر على طول وبيتحفظ</p>
+          </div>
+          <button className="close-btn" onClick={() => setShowTheme(false)}><XIcon size={22} /></button>
+        </div>
+        <div className="theme-grid">
+          {THEMES.map(t => (
+            <button key={t.key}
+              className={`theme-swatch ${theme === t.key ? "theme-swatch-active" : ""}`}
+              onClick={() => { setTheme(t.key); setShowTheme(false); setToast("اتغيّر الثيم ✨"); }}>
+              <span className="theme-dot" style={{ background: t.swatch }} />
+              <span className="theme-name">{t.label}</span>
+              {theme === t.key && <span className="theme-check"><CheckIcon size={12} /></span>}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  ) : null;
+
+  const toastEl = toast ? <div className="toast">{toast}</div> : null;
+
+  if (currentPage === "Schedule") {
+    return (
+      <div className="app" dir="rtl">
           <header className="header sticky dash-header">
             <div className="dash-header-row">
               <div>
@@ -645,36 +911,160 @@ const App: React.FC = () => {
               ))}
             </div>
           </main>
-          <nav className="bottom-nav">
-            <div className="nav-inner">
-              {navItems.map(({ page, Icon }) => (
-                <button key={page} onClick={() => setCurrentPage(page)}
-                  className={`nav-item ${currentPage === page ? "nav-active" : "nav-inactive"}`}>
-                  <span className={`nav-icon-wrap ${currentPage === page ? "nav-icon-active" : ""}`}><Icon size={20} /></span>
-                </button>
-              ))}
-            </div>
-          </nav>
+          {navBar}
+          {themeModal}
+          {toastEl}
         </div>
       );
-    }
+  }
+
+  if (currentPage === "Progress") {
+    return (
+      <div className="app" dir="rtl">
+        <header className="header sticky dash-header">
+          <div className="dash-header-row">
+            <div>
+              <h1 className="dash-title">تقدمك</h1>
+              <p className="dash-sub">كل كيلو بتحسبه · {logs.length} تمرين مسجّل</p>
+            </div>
+            <div className="dash-header-actions">
+              <button className="icon-btn-circle" onClick={() => setShowTheme(true)} title="Theme"><PaletteIcon size={18} /></button>
+            </div>
+          </div>
+        </header>
+
+        <main className="main dash-main progress-main">
+          <div className="stat-grid">
+            <div className="stat-card stat-hero">
+              <p className="stat-label">إجمالي الوزن المرفوع</p>
+              <p className="stat-value">{fmtVolume(monthVolume)}<span className="stat-unit">{unit}</span></p>
+              <p className={`stat-hint ${volumeDelta === null ? "" : volumeDelta >= 0 ? "up" : "down"}`}>
+                {volumeDelta === null
+                  ? "أول شهر ليك — كمّل!"
+                  : volumeDelta >= 0
+                    ? `▲ ${volumeDelta}% عن الشهر اللي فات`
+                    : `▼ ${Math.abs(volumeDelta)}% عن الشهر اللي فات`}
+              </p>
+            </div>
+            <div className="stat-card">
+              <p className="stat-label">تمارين خلصتها</p>
+              <p className="stat-value">{monthLogs.length}</p>
+              <p className="stat-hint">{monthLogs.length ? `متوسط ${fmtVolume(monthVolume / monthLogs.length)} ${unit} للتمرين` : "لسه مفيش"}</p>
+            </div>
+            <div className="stat-card">
+              <p className="stat-label">ستريك</p>
+              <p className="stat-value">{streak}<span className="stat-unit">يوم</span></p>
+              <p className="stat-hint">{streak > 0 ? "كمّل كده 🔥" : "ابدأ سلسلة جديدة"}</p>
+            </div>
+            <div className="stat-card">
+              <p className="stat-label">أقوى يوم</p>
+              <p className="stat-value">{bestLog ? bestLog.date.slice(8, 10) : "—"}</p>
+              <p className="stat-hint">{bestLog ? `${fmtVolume(bestLog.volume)} ${unit}` : "لسه مفيش"}</p>
+            </div>
+            <div className="stat-card">
+              <p className="stat-label">التمرين المفضل</p>
+              <p className="stat-value stat-value-sm">{favoriteExercise || "—"}</p>
+              <p className="stat-hint">{favoriteExercise ? "أكتر تمرين كررته" : "لسه مفيش"}</p>
+            </div>
+          </div>
+
+          <div className="card cal-card">
+            <div className="cal-head">
+              <button className="cal-nav" onClick={() => shiftMonth(-1)}>‹</button>
+              <h3 className="cal-title">{monthLabel(calMonth.y, calMonth.m)}</h3>
+              <button className="cal-nav" onClick={() => shiftMonth(1)}>›</button>
+            </div>
+            <div className="cal-grid cal-dow">
+              {["ح", "ن", "ث", "ر", "خ", "ج", "س"].map((d, i) => <span key={i} className="cal-dow-label">{d}</span>)}
+            </div>
+            <div className="cal-grid">
+              {Array.from({ length: firstDow }).map((_, i) => <span key={`e${i}`} className="cal-cell cal-cell-empty" />)}
+              {Array.from({ length: daysInMonth }).map((_, i) => {
+                const n = i + 1;
+                const key = `${calMonth.y}-${String(calMonth.m + 1).padStart(2, "0")}-${String(n).padStart(2, "0")}`;
+                const done = loggedDates.has(key);
+                const isToday = key === todayKey();
+                return (
+                  <div key={key} className={`cal-cell ${done ? "cal-cell-done" : ""} ${isToday ? "cal-cell-today" : ""}`}>
+                    <span className="cal-num">{n}</span>
+                    {done && <span className="cal-dot" />}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="cal-legend">
+              <span><i className="legend-dot legend-dot-done" /> يوم تمرين</span>
+              <span><i className="legend-dot legend-dot-today" /> النهاردة</span>
+            </div>
+          </div>
+
+          <div className="card bars-card">
+            <div className="card-head-row">
+              <h3 className="card-title">الوزن على الأسابيع</h3>
+              <span className="card-badge">{fmtVolume(monthVolume)} {unit}</span>
+            </div>
+            <div className="bars">
+              {weekBuckets.map((v, i) => (
+                <div key={i} className="bar-col">
+                  <span className="bar-val">{v > 0 ? fmtVolume(v) : ""}</span>
+                  <div className="bar-track">
+                    <div className="bar-fill" style={{ height: v > 0 ? `${Math.max(6, Math.round((v / maxWeek) * 100))}%` : "0%" }} />
+                  </div>
+                  <span className="bar-label">أسبوع {i + 1}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="card">
+            <h3 className="card-title">آخر التمارين</h3>
+            {logs.length === 0 ? (
+              <p className="day-empty">لسه مسجلتش تمرين — افتح يوم واضغط «خلصت التمرين».</p>
+            ) : (
+              <div className="recent-list">
+                {logs.slice(0, 6).map(l => (
+                  <div key={l.id} className="recent-row">
+                    <ExerciseThumb name={l.exercises[0]?.name || ""} muscle={l.exercises[0]?.muscle || ""} size={34} />
+                    <div className="recent-info">
+                      <p className="ex-name">{l.dayLabel}</p>
+                      <p className="ex-muscle">{l.exercises.length} تمارين · {fmtDate(l.date)}</p>
+                    </div>
+                    <span className="recent-vol">{fmtVolume(l.volume)}<em>{unit}</em></span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </main>
+
+        {navBar}
+        {themeModal}
+        {toastEl}
+      </div>
+    );
+  }
+
+  if (currentPage === "AI") {
     return (
       <div className="app">
-        <div className="placeholder">
-          <div className="card placeholder-card">
-            <p className="placeholder-text">{placeholderPages[currentPage]}</p>
+        <header className="header sticky dash-header">
+          <div className="dash-header-row">
+            <div>
+              <h1 className="dash-title">المدرب الذكي</h1>
+              <p className="dash-sub">قريب جداً</p>
+            </div>
           </div>
-        </div>
-        <nav className="bottom-nav">
-          <div className="nav-inner">
-            {navItems.map(({ page, Icon }) => (
-              <button key={page} onClick={() => setCurrentPage(page)}
-                className={`nav-item ${currentPage === page ? "nav-active" : "nav-inactive"}`}>
-                <span className={`nav-icon-wrap ${currentPage === page ? "nav-icon-active" : ""}`}><Icon size={20} /></span>
-              </button>
-            ))}
+        </header>
+        <main className="main dash-main">
+          <div className="card empty-state-card">
+            <div className="empty-icon"><ChatIcon size={26} /></div>
+            <h3 className="card-title">المدرب الذكي جاي في الطريق</h3>
+            <p className="empty-sub">هيسألك عن هدفك ويبني لك خطة على مقاسك، ويعدّلها حسب تقدمك.</p>
           </div>
-        </nav>
+        </main>
+        {navBar}
+        {themeModal}
+        {toastEl}
       </div>
     );
   }
@@ -688,6 +1078,7 @@ const App: React.FC = () => {
             <p className="dash-sub">{totalExercises} exercises across {days.length} days</p>
           </div>
           <div className="dash-header-actions">
+            <button className="icon-btn-circle" onClick={() => setShowTheme(true)} title="Theme"><PaletteIcon size={18} /></button>
             <button className="icon-btn-circle" onClick={openSettings}><SettingsIcon size={18} /></button>
           </div>
         </div>
@@ -742,11 +1133,11 @@ const App: React.FC = () => {
                           <ExerciseThumb name={ex.name} muscle={ex.muscle} />
                           <div className="ex-info">
                             <p className="ex-name">{ex.name}</p>
-                            <p className="ex-muscle">{ex.muscle}</p>
+                            <p className="ex-muscle">{ex.muscle}{ex.weight ? ` · ${ex.weight} ${unit}` : ""}</p>
                           </div>
                           <div className="ex-sets">{ex.sets}×{ex.reps}</div>
                           <div className="ex-row-actions">
-                            <button className="ex-action" onClick={() => { setEditingExercise({ dayId: day.id, ex }); setEditSets(ex.sets); setEditReps(ex.reps); }}>
+                            <button className="ex-action" onClick={() => { setEditingExercise({ dayId: day.id, ex }); setEditSets(ex.sets); setEditReps(ex.reps); setEditWeight(ex.weight || 0); }}>
                               <EditIcon size={14} />
                             </button>
                             <button className="ex-action ex-action-danger" onClick={() => removeExercise(day.id, ex.id)}>
@@ -760,6 +1151,12 @@ const App: React.FC = () => {
                   <button className="add-exercise-btn" onClick={() => { setPickerDayId(day.id); setPickerSearch(""); setPickerFilter("All"); }}>
                     <PlusIcon size={16} /> Add Exercise
                   </button>
+                  {day.exercises.length > 0 && (
+                    <button className="finish-btn" onClick={() => openFinish(day)}>
+                      <CheckIcon size={16} />
+                      <span>خلصت التمرين</span>
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -812,6 +1209,19 @@ const App: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            <div className="edit-field edit-field-wide">
+              <div className="ob-field-label-row">
+                <label className="ob-field-label">Weight per set</label>
+                <span className="edit-weight-hint">{unit}</span>
+              </div>
+              <div className="stepper stepper-wide">
+                <button className="stepper-btn" onClick={() => setEditWeight(w => Math.max(0, w - 2.5))}><MinusIcon /></button>
+                <span className="stepper-label">{editWeight}</span>
+                <button className="stepper-btn" onClick={() => setEditWeight(w => w + 2.5)}><PlusIcon size={14} /></button>
+              </div>
+            </div>
+
             <button className="btn-save modal-save" onClick={saveExerciseEdit}>Save</button>
           </div>
         </div>
@@ -856,16 +1266,48 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <nav className="bottom-nav">
-        <div className="nav-inner">
-          {navItems.map(({ page, Icon }) => (
-            <button key={page} onClick={() => setCurrentPage(page)}
-              className={`nav-item ${currentPage === page ? "nav-active" : "nav-inactive"}`}>
-              <span className={`nav-icon-wrap ${currentPage === page ? "nav-icon-active" : ""}`}><Icon size={20} /></span>
-            </button>
-          ))}
+      {dayToFinish && (
+        <div className="modal-overlay">
+          <div className="modal-backdrop" onClick={() => setDayToFinish(null)} />
+          <div className="modal-sheet finish-sheet">
+            <div className="modal-header">
+              <div>
+                <h3 className="modal-title">خلصت التمرين؟</h3>
+                <p className="modal-sub">{dayToFinish.label} · {dayToFinish.exercises.length} تمارين</p>
+              </div>
+              <button className="close-btn" onClick={() => setDayToFinish(null)}><XIcon size={22} /></button>
+            </div>
+
+            <div className="finish-list">
+              {dayToFinish.exercises.map(e => (
+                <div key={e.id} className="finish-row">
+                  <ExerciseThumb name={e.name} muscle={e.muscle} size={34} />
+                  <div className="finish-info">
+                    <p className="ex-name">{e.name}</p>
+                    <p className="ex-muscle">{e.sets} × {e.reps}</p>
+                  </div>
+                  <div className="weight-stepper">
+                    <button className="stepper-btn stepper-btn-sm" onClick={() => setFinishWeights(w => ({ ...w, [e.id]: Math.max(0, (w[e.id] || 0) - 2.5) }))}><MinusIcon /></button>
+                    <span className="weight-val">{finishWeights[e.id] || 0}<em>{unit}</em></span>
+                    <button className="stepper-btn stepper-btn-sm" onClick={() => setFinishWeights(w => ({ ...w, [e.id]: (w[e.id] || 0) + 2.5 }))}><PlusIcon size={12} /></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="finish-total">
+              <span>إجمالي الوزن المرفوع</span>
+              <strong>{finishTotal > 0 ? finishTotal.toLocaleString() : 0} {unit}</strong>
+            </div>
+
+            <button className="continue-btn finish-confirm" onClick={finishDay}>سجّل التمرين</button>
+          </div>
         </div>
-      </nav>
+      )}
+
+      {navBar}
+      {themeModal}
+      {toastEl}
     </div>
   );
 };
