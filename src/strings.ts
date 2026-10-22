@@ -91,6 +91,25 @@ export const S = {
     finished: (clock: string) => `تم التسجيل 💪 ${clock}`,
   },
 
+  /* ===== الإعدادات (A7) ===== */
+  settings: {
+    title: "الإعدادات",
+    editProfile: "تعديل الملف الشخصي",
+    export: "تصدير البيانات (نسخة احتياطية)",
+    import: "استيراد نسخة",
+    theme: "اختار ثيم",
+    exported: "النسخة الاتنزّلت ✅",
+    imported: "البيانات اترجعت ✅",
+    importFailed: "الملف مش مفهوم — اتأكد إنه نسخة صح من التطبيق",
+    importEmpty: "الملف مفيهوش بيانات مفهومة",
+  },
+
+  errorBoundary: {
+    title: "حصلت مشكلة 😕",
+    sub: "التمرين ما اتسيبش — بياناتك محفوظة على جهازك.",
+    reload: "أعيد تحميل التطبيق",
+  },
+
   levelLabel: (v: string): string =>
     v === "Beginner" ? "مبتدئ" : v === "Advanced" ? "متقدم" : v === "Intermediate" ? "متوسط" : v,
 

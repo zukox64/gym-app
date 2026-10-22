@@ -9,6 +9,14 @@ import { DumbbellIcon } from "./icons";
 import { EQUIPMENT_OPTIONS } from "../data/equipment";
 import { GOAL_OPTIONS, LEVEL_OPTIONS } from "../config";
 import { uid } from "../lib/id";
+import {
+  ageError,
+  clampedProfile,
+  heightError,
+  nameError,
+  targetError,
+  weightError,
+} from "../lib/validate";
 import type { UserProfile, WorkoutDay } from "../types";
 import { S } from "../strings";
 
@@ -34,20 +42,40 @@ export const Onboarding: React.FC<OnboardingProps> = ({ existing, onSave, onCanc
   const [daysPerWeek, setDaysPerWeek] = useState<number | null>(existing?.daysPerWeek ?? null);
   const [equipment, setEquipment] = useState<string[]>(existing ? [...existing.equipment] : []);
   const [error, setError] = useState("");
+  /** A7: الأخطاء الحقلية تظهر بعد محاولة تمرين فاشلة (مش أثناء الكتابة) */
+  const [showErrors, setShowErrors] = useState(false);
 
   const toggleEquipment = (item: string) =>
     setEquipment(p => p.includes(item) ? p.filter(i => i !== item) : [...p, item]);
 
-  const step1Valid = name.trim().length > 0;
-  const step2Valid = age !== "" && Number(age) > 0 && weight !== "" && Number(weight) > 0 && height !== "" && Number(height) > 0;
-  const step3Valid = !!goal && !!level && !!daysPerWeek && equipment.length > 0 && targetWeight !== "" && Number(targetWeight) > 0;
+  const errName = showErrors ? nameError(name) : null;
+  const errAge = showErrors ? ageError(age) : null;
+  const errWeight = showErrors ? weightError(weight, weightUnit) : null;
+  const errHeight = showErrors ? heightError(height, heightUnit) : null;
+  const errTarget = showErrors ? targetError(targetWeight, weightUnit) : null;
+
+  /** التحقق قبل الانتقال — لو فيه غلطة بنعرض الأخطاء بدل ما نمنع الضغطة أصلًا */
+  const tryAdvance = () => {
+    setShowErrors(true);
+    if (step === 1 && nameError(name)) return;
+    if (step === 2 && (ageError(age) || weightError(weight, weightUnit) || heightError(height, heightUnit))) return;
+    if (step === 3 && (!!targetError(targetWeight, weightUnit) || !goal || !level || !daysPerWeek || equipment.length === 0)) return;
+    setError("");
+    setStep(s => Math.min(4, s + 1));
+  };
 
   const finish = () => {
-    const profileValid = !!name.trim() && age !== "" && weight !== "" && height !== "" && !!goal && !!level && !!daysPerWeek && equipment.length > 0 && targetWeight !== "";
-    if (!profileValid) { setError(S.onboarding.incomplete); return; }
+    const invalid = nameError(name) || ageError(age) || weightError(weight, weightUnit)
+      || heightError(height, heightUnit) || !!targetError(targetWeight, weightUnit)
+      || !goal || !level || !daysPerWeek || equipment.length === 0;
+    if (invalid) { setShowErrors(true); setError(S.onboarding.incomplete); return; }
+    const clamped = clampedProfile({
+      age: Number(age), weight: Number(weight), weightUnit,
+      height: Number(height), heightUnit, targetWeight: Number(targetWeight),
+    });
     const p: UserProfile = {
-      name: name.trim(), age: Number(age), weight: Number(weight), weightUnit,
-      height: Number(height), heightUnit, goal, targetWeight: Number(targetWeight),
+      name: name.trim(), ...clamped,
+      weightUnit, heightUnit, goal,
       level, daysPerWeek: daysPerWeek!, equipment,
     };
     // سلوك الأصلي: الحفظ بيعمل خطة فاضية بعدد أيام الأسبوع (يتعبّى منها)
@@ -118,6 +146,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ existing, onSave, onCanc
             <h1 className="ob-question">{S.onboarding.qName}</h1>
             <input className="field-input ob-name-input" type="text" value={name}
               onChange={e => setName(e.target.value)} placeholder={S.onboarding.phName} autoFocus />
+            {errName && <p className="field-error">{errName}</p>}
           </>
         )}
         {step === 2 && (
@@ -127,6 +156,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ existing, onSave, onCanc
               <label className="ob-field-label">{S.onboarding.age}</label>
               <input className="field-input" type="number" inputMode="numeric" value={age}
                 onChange={e => setAge(e.target.value === "" ? "" : Number(e.target.value))} placeholder={S.onboarding.years} />
+              {errAge && <p className="field-error">{errAge}</p>}
             </div>
             <div className="ob-field-group">
               <div className="ob-field-label-row">
@@ -138,6 +168,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ existing, onSave, onCanc
               </div>
               <input className="field-input" type="number" inputMode="numeric" value={weight}
                 onChange={e => setWeight(e.target.value === "" ? "" : Number(e.target.value))} placeholder={S.onboarding.weight} />
+              {errWeight && <p className="field-error">{errWeight}</p>}
             </div>
             <div className="ob-field-group">
               <div className="ob-field-label-row">
@@ -149,6 +180,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ existing, onSave, onCanc
               </div>
               <input className="field-input" type="number" inputMode="numeric" value={height}
                 onChange={e => setHeight(e.target.value === "" ? "" : Number(e.target.value))} placeholder={S.onboarding.height} />
+              {errHeight && <p className="field-error">{errHeight}</p>}
             </div>
           </>
         )}
@@ -164,6 +196,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ existing, onSave, onCanc
               <label className="ob-field-label">{S.onboarding.qTarget} ({weightUnit})</label>
               <input className="field-input" type="number" inputMode="numeric" value={targetWeight}
                 onChange={e => setTargetWeight(e.target.value === "" ? "" : Number(e.target.value))} placeholder={S.onboarding.phTarget} />
+              {errTarget && <p className="field-error">{errTarget}</p>}
             </div>
             <h2 className="question-title ob-subheading">{S.onboarding.qLevel}</h2>
             {LEVEL_OPTIONS.map(opt => (
@@ -203,9 +236,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ existing, onSave, onCanc
 
       <div className="bottom-bar">
         {step < 4 ? (
-          <button className="continue-btn"
-            disabled={step === 1 ? !step1Valid : step === 2 ? !step2Valid : !step3Valid}
-            onClick={() => setStep(s => Math.min(4, s + 1))}>{S.onboarding.next}</button>
+          <button className="continue-btn" onClick={tryAdvance}>{S.onboarding.next}</button>
         ) : (
           <button className="continue-btn" onClick={finish}>
             {existing ? S.onboarding.save : S.onboarding.start}

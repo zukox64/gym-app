@@ -903,3 +903,40 @@ body { transition: background .3s ease; }
   transition: opacity .15s ease;
 }
 .template-apply:hover { opacity: .9; }
+
+/* ===== A7: fاليديشن — أخطاء حقول inline ===== */
+.field-error {
+  margin: 5px 2px 0;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #f87171;
+}
+
+/* ===== A7: الإعدادات ===== */
+.settings-list { display: flex; flex-direction: column; gap: 8px; }
+.settings-row {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; padding: 13px 14px;
+  background: var(--surface-2); border: 1px solid var(--stroke, var(--surface-2));
+  border-radius: var(--radius-sm);
+  color: var(--text); font-size: 13.5px; font-weight: 700; font-family: inherit;
+  cursor: pointer; transition: border-color .15s ease, background .15s ease;
+  text-align: start;
+}
+.settings-row:hover { border-color: var(--accent); }
+.settings-row-icon { display: inline-flex; color: var(--text-dim); }
+.settings-row-label { flex: 1; }
+.settings-row-go { display: inline-flex; color: var(--text-dim); transform: rotate(-90deg); }
+
+/* ===== A7: شاشة الأمان (ErrorBoundary) ===== */
+.error-boundary {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  padding: 24px; background: var(--bg, #0a0e13); color: var(--text, #fff);
+}
+.error-boundary-card {
+  max-width: 340px; width: 100%; text-align: center;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.error-boundary-card h1 { font-size: 20px; margin: 0; }
+.error-boundary-card p { font-size: 13px; color: var(--text-muted, #9aa); margin: 0; line-height: 1.6; }
+.error-boundary-card .continue-btn { margin-top: 6px; }

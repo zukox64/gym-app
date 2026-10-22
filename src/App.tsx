@@ -13,12 +13,13 @@ import { AITab } from "./components/AITab";
 import { WorkoutSession } from "./components/WorkoutSession";
 import { ThemeModal } from "./components/ThemeModal";
 import { NavBar } from "./components/NavBar";
+import { SettingsModal } from "./components/SettingsModal";
 import { useLocalStorage } from "./hooks/useLocalStorage";
 import { useTheme } from "./hooks/useTheme";
 import { useWorkoutLogs } from "./hooks/useWorkoutLogs";
 import { useWorkoutSession } from "./hooks/useWorkoutSession";
 import { STORAGE_KEYS } from "./config";
-import { sanitizePlan, sanitizeProfile } from "./lib/migrations";
+import { makeBundle, parseBundle, sanitizePlan, sanitizeProfile } from "./lib/migrations";
 import { closeRest } from "./lib/sessionUtils";
 import { fmtClock, todayKey } from "./lib/date";
 import { uid } from "./lib/id";
@@ -40,13 +41,14 @@ export default function App() {
   const [days, setDays] = useLocalStorage<WorkoutDay[]>(STORAGE_KEYS.plan, defaultPlan, {
     validate: sanitizePlan,
   });
-  const { logs, addLog } = useWorkoutLogs();
+  const { logs, setLogs, addLog } = useWorkoutLogs();
   const { theme, setTheme } = useTheme();
   const api = useWorkoutSession();
 
   const [currentPage, setCurrentPage] = useState<Page>("Home");
   const [editingProfile, setEditingProfile] = useState(false);
   const [showTheme, setShowTheme] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [toast, setToast] = useState("");
 
   /* ===== تأثيرات عرضية ===== */
@@ -59,6 +61,33 @@ export default function App() {
   /* ===== العمليات المشتركة ===== */
   const savePlan = (next: WorkoutDay[]) => setDays(next);
   const onToast = (msg: string) => setToast(msg);
+
+  /* ===== A7: تصدير/استيراد ===== */
+  const exportData = () => {
+    const bundle = makeBundle({ profile, plan: days, logs });
+    const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `gym-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setToast(S.settings.exported);
+  };
+
+  const importFile = (file: File) => {
+    file.text()
+      .then(json => {
+        const bundle = parseBundle(json);
+        if (!bundle) { setToast(S.settings.importFailed); return; }
+        const applied: string[] = [];
+        if (bundle.profile) { setProfile(bundle.profile); applied.push("profile"); }
+        if (bundle.plan) { setDays(bundle.plan); applied.push("plan"); }
+        if (bundle.logs) { setLogs(bundle.logs); applied.push("logs"); }
+        setToast(applied.length ? S.settings.imported : S.settings.importEmpty);
+      })
+      .catch(() => setToast(S.settings.importFailed));
+  };
 
   const startSession = (dayId: string) => {
     const day = days.find(d => d.id === dayId);
@@ -107,6 +136,16 @@ export default function App() {
       onClose={() => setShowTheme(false)}
     />
   );
+  const settingsModalEl = showSettings ? (
+    <SettingsModal
+      profile={profile}
+      onEditProfile={() => setEditingProfile(true)}
+      onExport={exportData}
+      onImportFile={importFile}
+      onOpenTheme={() => setShowTheme(true)}
+      onClose={() => setShowSettings(false)}
+    />
+  ) : null;
 
   /* ===== Onboarding / Settings ===== */
   if (profile === null || editingProfile) {
@@ -141,7 +180,7 @@ export default function App() {
           startSession={startSession}
           onToast={onToast}
           onOpenTheme={() => setShowTheme(true)}
-          onOpenSettings={() => setEditingProfile(true)}
+          onOpenSettings={() => setShowSettings(true)}
         />
       )}
       {currentPage === "Schedule" && (
@@ -160,6 +199,7 @@ export default function App() {
 
       <NavBar page={currentPage} onGo={setCurrentPage} />
       {themeModalEl}
+      {settingsModalEl}
       {toastEl}
     </div>
   );
