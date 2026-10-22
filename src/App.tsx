@@ -98,6 +98,43 @@ const PLAN_KEY = "gym-plan-v2";
 
 /* ===== Anatomical muscle diagrams (wger, open source) =====
    كل صورة = جسم تشريحي رمادي + العضلة المستهدفة بالأحمر (بنعمل zoom على العضلة) */
+const EXERCISE_PHOTOS: Record<string, string> = {
+  "Barbell Bench Press": "Barbell_Bench_Press_-_Medium_Grip/0.jpg",
+  "Incline Dumbbell Press": "Incline_Dumbbell_Press/0.jpg",
+  "Cable Fly": "Flat_Bench_Cable_Flyes/0.jpg",
+  "Push-ups": "Pushups/0.jpg",
+  "Dumbbell Rows": "Bent_Over_Two-Dumbbell_Row/0.jpg",
+  "Lat Pulldown": "Wide-Grip_Lat_Pulldown/0.jpg",
+  "Pull-ups": "Pullups/0.jpg",
+  "Seated Cable Row": "Seated_Cable_Rows/0.jpg",
+  "Overhead Press": "Standing_Military_Press/0.jpg",
+  "Lateral Raise": "Side_Lateral_Raise/0.jpg",
+  "Front Raise": "Front_Dumbbell_Raise/0.jpg",
+  "Face Pull": "Face_Pull/0.jpg",
+  "Barbell Curl": "Barbell_Curl/0.jpg",
+  "Hammer Curl": "Hammer_Curls/0.jpg",
+  "Preacher Curl": "Preacher_Curl/0.jpg",
+  "Tricep Pushdown": "Triceps_Pushdown/0.jpg",
+  "Skull Crushers": "EZ-Bar_Skullcrusher/0.jpg",
+  "Overhead Extension": "Cable_Rope_Overhead_Triceps_Extension/0.jpg",
+  "Barbell Squat": "Barbell_Squat/0.jpg",
+  "Leg Press": "Leg_Press/0.jpg",
+  "Leg Extension": "Leg_Extensions/0.jpg",
+  "Romanian Deadlift": "Romanian_Deadlift/0.jpg",
+  "Leg Curl": "Lying_Leg_Curls/0.jpg",
+  "Hip Thrust": "Barbell_Hip_Thrust/0.jpg",
+  "Bulgarian Split Squat": "Split_Squat_with_Dumbbells/0.jpg",
+  "Calf Raise": "Standing_Calf_Raises/0.jpg",
+  "Crunches": "Crunches/0.jpg",
+  "Hanging Leg Raise": "Hanging_Leg_Raise/0.jpg",
+  "Plank": "Plank/0.jpg",
+  "Russian Twist": "Russian_Twist/0.jpg",
+  "Farmer's Walk": "Farmers_Walk/0.jpg",
+  "Barbell Shrug": "Barbell_Shrug/0.jpg",
+};
+
+const PHOTO_BASE = "https://cdn.jsdelivr.net/gh/yuhonas/free-exercise-db@main/exercises/";
+
 const MUSCLE_IMG_BASE = "https://wger.de/static/images/muscles/";
 const BODY_IMG = {
   front: MUSCLE_IMG_BASE + "muscular_system_front.svg",
@@ -131,9 +168,10 @@ const MUSCLE_IMG: Record<string, MuscleArt> = {
 };
 
 /* ===== Themes ===== */
-type ThemeKey = "emerald" | "orange" | "violet" | "cyan" | "rose";
+type ThemeKey = "mono" | "emerald" | "orange" | "violet" | "cyan" | "rose";
 const THEME_KEY = "gym-theme-v1";
 const THEMES: { key: ThemeKey; label: string; swatch: string }[] = [
+  { key: "mono", label: "Dark", swatch: "#f5f6f7" },
   { key: "emerald", label: "Emerald", swatch: "#22c55e" },
   { key: "orange", label: "Sunset", swatch: "#f97316" },
   { key: "violet", label: "Violet", swatch: "#8b5cf6" },
@@ -158,7 +196,31 @@ interface WorkoutLog {
   dayLabel: string;
   exercises: LoggedExercise[];
   volume: number;
+  duration?: number;
+  rest?: number;
 }
+
+interface SessionItem {
+  id: string;
+  name: string;
+  muscle: string;
+  sets: number;
+  reps: number;
+  weight: number;
+  doneSets: number;
+}
+
+interface SessionState {
+  dayId: string;
+  label: string;
+  startedAt: number;
+  restSec: number;
+  items: SessionItem[];
+  currentIdx: number;
+  restLeft: number | null;
+}
+
+const REST_SECONDS = 90;
 
 const todayKey = (d = new Date()) => {
   const y = d.getFullYear();
@@ -176,6 +238,12 @@ const fmtDate = (iso: string) => {
   const d = parts[2] || 1;
   const m = (parts[1] || 1) - 1;
   return `${d} ${AR_MONTHS[m]}`;
+};
+
+const fmtClock = (sec: number) => {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
 };
 
 const defaultPlan = (): WorkoutDay[] => [
@@ -356,33 +424,46 @@ const PaletteIcon: React.FC<IconProps> = ({ size = 18 }) => (
   </svg>
 );
 
+const PlayIcon: React.FC<IconProps> = ({ size = 18 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" stroke="none">
+    <polygon points="6 3 21 12 6 21 6 3" />
+  </svg>
+);
+
 const CheckIcon: React.FC<IconProps> = ({ size = 18 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="20 6 9 17 4 12" />
   </svg>
 );
 
-const ExerciseThumb: React.FC<{ name: string; muscle: string; size?: number }> = ({ name, muscle, size = 46 }) => {
-  const [failed, setFailed] = useState(false);
+const ExerciseThumb: React.FC<{ name: string; muscle: string; size?: number; mode?: "photo" | "anatomy" }> = ({ name, muscle, size = 46, mode = "photo" }) => {
+  const [failedPhoto, setFailedPhoto] = useState(false);
+  const [failedArt, setFailedArt] = useState(false);
+  const photo = EXERCISE_PHOTOS[name];
   const art = MUSCLE_IMG[muscle];
 
-  if (!art || failed) {
+  if (mode === "anatomy" && art && !failedArt) {
     return (
-      <div className="ex-icon ex-icon-fallback" style={{ width: size, height: size }}>
-        {MUSCLE_ICONS[muscle] || "🏋️"}
+      <div className="ex-thumb ex-thumb-art" style={{ width: size, height: size }} title={name}>
+        <div className="ex-thumb-zoom" style={{ transform: `scale(${art.z})`, transformOrigin: `${art.x}% ${art.y}%` }}>
+          <img className="ex-art-body" src={art.back ? BODY_IMG.back : BODY_IMG.front} alt="" loading="lazy" decoding="async" onError={() => setFailedArt(true)} />
+          <img className="ex-art-muscle" src={MUSCLE_IMG_BASE + art.f} alt={name} loading="lazy" decoding="async" onError={() => setFailedArt(true)} />
+        </div>
+      </div>
+    );
+  }
+
+  if (photo && !failedPhoto) {
+    return (
+      <div className="ex-thumb" style={{ width: size, height: size }} title={name}>
+        <img className="ex-art-photo" src={PHOTO_BASE + photo} alt={name} loading="lazy" decoding="async" onError={() => setFailedPhoto(true)} />
       </div>
     );
   }
 
   return (
-    <div className="ex-thumb" style={{ width: size, height: size }} title={name}>
-      <div
-        className="ex-thumb-zoom"
-        style={{ transform: `scale(${art.z})`, transformOrigin: `${art.x}% ${art.y}%` }}
-      >
-        <img className="ex-art-body" src={art.back ? BODY_IMG.back : BODY_IMG.front} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} />
-        <img className="ex-art-muscle" src={MUSCLE_IMG_BASE + art.f} alt={name} loading="lazy" decoding="async" onError={() => setFailed(true)} />
-      </div>
+    <div className="ex-icon ex-icon-fallback" style={{ width: size, height: size }}>
+      {MUSCLE_ICONS[muscle] || "🏋️"}
     </div>
   );
 };
@@ -436,7 +517,7 @@ const App: React.FC = () => {
   const [renameValue, setRenameValue] = useState("");
 
   const [theme, setTheme] = useState<ThemeKey>(() => {
-    try { return (localStorage.getItem(THEME_KEY) as ThemeKey) || "emerald"; } catch { return "emerald"; }
+    try { return (localStorage.getItem(THEME_KEY) as ThemeKey) || "mono"; } catch { return "mono"; }
   });
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
   const [showTheme, setShowTheme] = useState(false);
@@ -444,6 +525,8 @@ const App: React.FC = () => {
   const [editWeight, setEditWeight] = useState(0);
   const [dayToFinish, setDayToFinish] = useState<WorkoutDay | null>(null);
   const [finishWeights, setFinishWeights] = useState<Record<string, number>>({});
+  const [session, setSession] = useState<SessionState | null>(null);
+  const [showDayPicker, setShowDayPicker] = useState(false);
   const [calMonth, setCalMonth] = useState(() => {
     const d = new Date();
     return { y: d.getFullYear(), m: d.getMonth() };
@@ -459,6 +542,19 @@ const App: React.FC = () => {
     const t = window.setTimeout(() => setToast(""), 2600);
     return () => window.clearTimeout(t);
   }, [toast]);
+
+  // ساعة الوضع التدريبي — تحديث كل ثانية
+  useEffect(() => {
+    if (!session) return;
+    const id = window.setInterval(() => {
+      setSession(s => {
+        if (!s) return s;
+        if (s.restLeft && s.restLeft > 0) return { ...s, restLeft: s.restLeft - 1, restSec: s.restSec + 1 };
+        return s;
+      });
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [!!session]);
 
   useEffect(() => {
     try {
@@ -609,6 +705,66 @@ const App: React.FC = () => {
 
     setDayToFinish(null);
     setToast("تم تسجيل التمرين 💪");
+  };
+
+  /* ===== الوضع التدريبي ===== */
+  const startSession = (dayId: string) => {
+    const day = days.find(d => d.id === dayId);
+    if (!day) return;
+    if (day.exercises.length === 0) { setToast("اليوم ده فاضي — ضيف تمارين الأول"); return; }
+    setSession({
+      dayId: day.id, label: day.label, startedAt: Date.now(), restSec: 0,
+      items: day.exercises.map(e => ({ id: e.id, name: e.name, muscle: e.muscle, sets: e.sets, reps: e.reps, weight: e.weight || 0, doneSets: 0 })),
+      currentIdx: 0, restLeft: null,
+    });
+    setShowDayPicker(false);
+    setExpandedDay(null);
+  };
+
+  const sessionMarkSet = () => {
+    setSession(s => {
+      if (!s) return s;
+      const items = s.items.map((it, i) => i === s.currentIdx ? { ...it, doneSets: Math.min(it.sets, it.doneSets + 1) } : it);
+      return { ...s, items };
+    });
+  };
+
+  const sessionNext = () => {
+    setSession(s => {
+      if (!s) return s;
+      if (s.currentIdx >= s.items.length - 1) return { ...s, restLeft: null };
+      return { ...s, currentIdx: s.currentIdx + 1, restLeft: REST_SECONDS };
+    });
+  };
+
+  const sessionPrev = () => {
+    setSession(s => {
+      if (!s) return s;
+      if (s.currentIdx === 0) return s;
+      return { ...s, currentIdx: s.currentIdx - 1, restLeft: null };
+    });
+  };
+
+  const finishSession = () => {
+    if (!session) return;
+    const elapsed = Math.floor((Date.now() - session.startedAt) / 1000);
+    const logged: LoggedExercise[] = session.items.map(it => ({
+      name: it.name, muscle: it.muscle, sets: it.doneSets > 0 ? it.doneSets : it.sets, reps: it.reps, weight: it.weight,
+    }));
+    const volume = logged.reduce((s, e) => s + e.sets * e.reps * e.weight, 0);
+    const entry: WorkoutLog = {
+      id: uid(), date: todayKey(), dayId: session.dayId,
+      dayLabel: session.label, exercises: logged, volume, duration: elapsed, rest: session.restSec,
+    };
+    saveLogs([entry, ...logs]);
+
+    // الصق الأوزان الجديدة في الخطة
+    savePlan(days.map(d => d.id === session.dayId
+      ? { ...d, exercises: d.exercises.map(e => { const it = session.items.find(x => x.id === e.id); return it ? { ...e, weight: it.weight } : e; }) }
+      : d));
+
+    setSession(null);
+    setToast(`تم التسجيل 💪 ${fmtClock(elapsed)}`);
   };
 
   /* ===== Stats ===== */
@@ -829,7 +985,118 @@ const App: React.FC = () => {
     );
   }
 
-  // ===== Main App =====
+  const toastEl = toast ? <div className="toast">{toast}</div> : null;
+
+  // ===== شاشة التمرين الحية =====
+  if (session) {
+    const cur = session.items[session.currentIdx];
+    const elapsed = Math.floor((Date.now() - session.startedAt) / 1000);
+    const totalSets = session.items.reduce((a, i) => a + i.sets, 0);
+    const doneSetsAll = session.items.reduce((a, i) => a + Math.min(i.doneSets, i.sets), 0);
+
+    return (
+      <div className="app session-page">
+        <header className="header sticky dash-header">
+          <div className="dash-header-row">
+            <button className="sess-quit" onClick={() => setSession(null)} title="إلغاء"><XIcon size={20} /></button>
+            <div className="sess-head-center">
+              <h1 className="dash-title">{session.label}</h1>
+              <p className="dash-sub">{doneSetsAll} من {totalSets} مجموعات</p>
+            </div>
+            <span className="sess-head-spacer" />
+          </div>
+        </header>
+
+        <main className="main dash-main sess-main">
+          <div className="sess-timers">
+            <div className="sess-timer">
+              <span className="sess-timer-label">وقت التمرين</span>
+              <strong className="sess-timer-val">{fmtClock(elapsed)}</strong>
+            </div>
+            <div className={`sess-timer ${session.restLeft ? "sess-timer-live" : ""}`}>
+              <span className="sess-timer-label">{session.restLeft ? "استراحة كمان" : "وقت البريك"}</span>
+              <strong className="sess-timer-val">{fmtClock(session.restLeft ?? session.restSec)}</strong>
+            </div>
+          </div>
+
+          {session.restLeft && (
+            <button className="rest-skip" onClick={() => setSession(s => s ? { ...s, restLeft: null } : s)}>
+              <span>استراحة جارية · {fmtClock(session.restLeft)}</span>
+              <strong>تخطّي الاستراحة</strong>
+            </button>
+          )}
+
+          <div className="card sess-card">
+            <div className="sess-top">
+              <ExerciseThumb name={cur.name} muscle={cur.muscle} size={72} />
+              <div className="sess-info">
+                <span className="sess-idx">تمرين {session.currentIdx + 1} من {session.items.length}</span>
+                <h3 className="sess-name">{cur.name}</h3>
+                <p className="ex-muscle">{cur.muscle} · {cur.reps} عدة × {cur.sets} مجموعات</p>
+              </div>
+              <button className="sess-anatomy-btn" title="عضلة التمرين">
+                <ExerciseThumb mode="anatomy" name={cur.name} muscle={cur.muscle} size={44} />
+              </button>
+            </div>
+
+            <div className="sess-weight-row">
+              <span className="sess-label">وزن المجموعة</span>
+              <div className="weight-stepper">
+                <button className="stepper-btn stepper-btn-sm" onClick={() => setSession(s => {
+                  if (!s) return s;
+                  return { ...s, items: s.items.map((it, i) => i === s.currentIdx ? { ...it, weight: Math.max(0, it.weight - 2.5) } : it) };
+                })}><MinusIcon /></button>
+                <span className="weight-val">{cur.weight}<em>{unit}</em></span>
+                <button className="stepper-btn stepper-btn-sm" onClick={() => setSession(s => {
+                  if (!s) return s;
+                  return { ...s, items: s.items.map((it, i) => i === s.currentIdx ? { ...it, weight: it.weight + 2.5 } : it) };
+                })}><PlusIcon size={12} /></button>
+              </div>
+              <span className={`sess-sets-done ${cur.doneSets >= cur.sets ? "sess-sets-full" : ""}`}>
+                {cur.doneSets}/{cur.sets} تم
+              </span>
+            </div>
+
+            <div className="sess-btns">
+              <button className="sess-btn-ghost" onClick={sessionPrev} disabled={session.currentIdx === 0}>
+                <span>‹ الرجوع</span>
+              </button>
+              <button className="sess-btn-set" onClick={() => sessionMarkSet()} disabled={cur.doneSets >= cur.sets}>
+                <CheckIcon size={16} />
+                <span>عدة تتمت</span>
+              </button>
+              <button className="sess-btn-primary" onClick={sessionNext}>
+                <span>التالي</span>
+                <span className="sess-next-chev">›</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="card sess-list-card">
+            <h3 className="card-title">تمارين اليوم</h3>
+            <div className="sess-list">
+              {session.items.map((it, i) => (
+                <button key={it.id} className={`sess-row ${i === session.currentIdx ? "sess-row-now" : i < session.currentIdx ? "sess-row-done" : ""}`}
+                  onClick={() => setSession(s => s ? { ...s, currentIdx: i, restLeft: null } : s)}>
+                  <span className="sess-row-idx">{i < session.currentIdx ? "✓" : i + 1}</span>
+                  <span className="sess-row-name">{it.name}</span>
+                  <span className="sess-row-sets">{it.sets}×{it.reps}</span>
+                  <span className="sess-row-w">{it.weight} {unit}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button className="finish-btn sess-finish" onClick={finishSession}>
+            <CheckIcon size={16} />
+            <span>اقفل اليوم وسجّله</span>
+          </button>
+        </main>
+        {toastEl}
+      </div>
+    );
+  }
+
   const navBar = (
     <nav className="bottom-nav" dir="ltr">
       <div className="nav-inner">
@@ -869,7 +1136,30 @@ const App: React.FC = () => {
     </div>
   ) : null;
 
-  const toastEl = toast ? <div className="toast">{toast}</div> : null;
+  const dayPickerModal = showDayPicker ? (
+    <div className="modal-overlay">
+      <div className="modal-backdrop" onClick={() => setShowDayPicker(false)} />
+      <div className="modal-sheet theme-sheet" dir="rtl">
+        <div className="modal-header">
+          <div>
+            <h3 className="modal-title">يلا نبدأ — اختار اليوم</h3>
+            <p className="modal-sub">بيدوّن وزن كل مجموعة ووقت الاستراحة تلقائياً</p>
+          </div>
+          <button className="close-btn" onClick={() => setShowDayPicker(false)}><XIcon size={22} /></button>
+        </div>
+        <div className="day-picker-list">
+          {days.map(d => (
+            <button key={d.id} className="day-pick-row" onClick={() => startSession(d.id)}
+              disabled={d.exercises.length === 0}>
+              <span className="day-pick-label">{d.label}</span>
+              <span className="day-pick-meta">{d.exercises.length > 0 ? `${d.exercises.length} تمارين` : "فاضي"}</span>
+              <span className="day-pick-go"><PlayIcon size={13} /></span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  ) : null;
 
   if (currentPage === "Schedule") {
     return (
@@ -1027,7 +1317,7 @@ const App: React.FC = () => {
                     <ExerciseThumb name={l.exercises[0]?.name || ""} muscle={l.exercises[0]?.muscle || ""} size={34} />
                     <div className="recent-info">
                       <p className="ex-name">{l.dayLabel}</p>
-                      <p className="ex-muscle">{l.exercises.length} تمارين · {fmtDate(l.date)}</p>
+                      <p className="ex-muscle">{l.exercises.length} تمارين · {fmtDate(l.date)}{l.duration ? ` · ${fmtClock(l.duration)}` : ""}{l.rest ? ` · بريك ${fmtClock(l.rest)}` : ""}</p>
                     </div>
                     <span className="recent-vol">{fmtVolume(l.volume)}<em>{unit}</em></span>
                   </div>
@@ -1085,6 +1375,11 @@ const App: React.FC = () => {
       </header>
 
       <main className="main dash-main">
+        <button className="start-workout-btn" onClick={() => setShowDayPicker(true)}>
+          <PlayIcon size={15} />
+          <span>ابدأ التمرين</span>
+          <em>{days.length} أيام جاهزة</em>
+        </button>
         {days.map(day => {
           const isExpanded = expandedDay === day.id;
           const exCount = day.exercises.length;
@@ -1152,9 +1447,15 @@ const App: React.FC = () => {
                     <PlusIcon size={16} /> Add Exercise
                   </button>
                   {day.exercises.length > 0 && (
-                    <button className="finish-btn" onClick={() => openFinish(day)}>
-                      <CheckIcon size={16} />
-                      <span>خلصت التمرين</span>
+                    <button className="finish-btn" onClick={() => startSession(day.id)}>
+                      <PlayIcon size={15} />
+                      <span>ابدأ تمرين اليوم ده</span>
+                    </button>
+                  )}
+                  {day.exercises.length > 0 && (
+                    <button className="quick-log-btn" onClick={() => openFinish(day)}>
+                      <CheckIcon size={14} />
+                      <span>خلصت التمرين — تسجيل سريع</span>
                     </button>
                   )}
                 </div>
@@ -1307,6 +1608,7 @@ const App: React.FC = () => {
 
       {navBar}
       {themeModal}
+      {dayPickerModal}
       {toastEl}
     </div>
   );
