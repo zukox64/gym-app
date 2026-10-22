@@ -135,6 +135,43 @@ const EXERCISE_PHOTOS: Record<string, string> = {
 
 const PHOTO_BASE = "https://cdn.jsdelivr.net/gh/yuhonas/free-exercise-db@main/exercises/";
 
+/* ===== حركات التمارين — GIF متحرك (dataset مفتوح: exercises-dataset) ===== */
+const GIF_BASE = "https://cdn.jsdelivr.net/gh/hasaneyldrm/exercises-dataset@main/videos/";
+const EXERCISE_GIFS: Record<string, string> = {
+  "Barbell Bench Press": "0025-EIeI8Vf.gif",
+  "Incline Dumbbell Press": "0314-ns0SIbU.gif",
+  "Cable Fly": "0227-Pr9Rhf4.gif",
+  "Push-ups": "0662-I4hDWkc.gif",
+  "Dumbbell Rows": "0293-BJ0Hz5L.gif",
+  "Lat Pulldown": "2330-LEprlgG.gif",
+  "Pull-ups": "0652-lBDjFxJ.gif",
+  "Seated Cable Row": "0861-fUBheHs.gif",
+  "Overhead Press": "1457-Kyd9Rz5.gif",
+  "Lateral Raise": "0334-DsgkuIt.gif",
+  "Front Raise": "0310-3eGE2JC.gif",
+  "Face Pull": "3697-G61cXLk.gif",
+  "Barbell Curl": "0031-25GPyDY.gif",
+  "Hammer Curl": "0313-slDvUAU.gif",
+  "Preacher Curl": "0372-jivWf8n.gif",
+  "Tricep Pushdown": "1723-qRZ5S1N.gif",
+  "Skull Crushers": "1721-yRLPCLu.gif",
+  "Overhead Extension": "0194-2IxROQ1.gif",
+  "Barbell Squat": "0043-qXTaZnJ.gif",
+  "Leg Press": "0739-10Z2DXU.gif",
+  "Leg Extension": "0585-my33uHU.gif",
+  "Romanian Deadlift": "0085-wQ2c4XD.gif",
+  "Leg Curl": "0586-17lJ1kr.gif",
+  "Hip Thrust": "1409-qKBpF7I.gif",
+  "Bulgarian Split Squat": "0381-SSsBDwB.gif",
+  "Calf Raise": "1372-8ozhUIZ.gif",
+  "Crunches": "0267-kjJ3VoQ.gif",
+  "Hanging Leg Raise": "0472-I3tsCnC.gif",
+  "Plank": "0464-CosupLu.gif",
+  "Russian Twist": "0687-XVDdcoj.gif",
+  "Farmer's Walk": "2133-qPEzJjA.gif",
+  "Barbell Shrug": "0095-dG7tG5y.gif",
+};
+
 const MUSCLE_IMG_BASE = "https://wger.de/static/images/muscles/";
 const BODY_IMG = {
   front: MUSCLE_IMG_BASE + "muscular_system_front.svg",
@@ -330,6 +367,91 @@ const PLAN_TEMPLATES: PlanTemplate[] = [
       { label: "Day 5 — Legs", muscles: ["Quads", "Hamstrings", "Glutes", "Calves"] },
     ],
   },
+  {
+    id: "pplx2",
+    name: "PPL ×2 — 6x/Week",
+    description: "PPL مرتين في الأسبوع — حجم تدريب عالي جداً للجدعين",
+    level: "Advanced",
+    days: 6,
+    split: "PPL ×2",
+    daysPlan: [
+      { label: "Day 1 — Push A", muscles: ["Chest", "Shoulders", "Triceps"] },
+      { label: "Day 2 — Pull A", muscles: ["Back", "Lats", "Biceps"] },
+      { label: "Day 3 — Legs A", muscles: ["Quads", "Hamstrings", "Calves"] },
+      { label: "Day 4 — Push B", muscles: ["Chest", "Side Delt", "Triceps"] },
+      { label: "Day 5 — Pull B", muscles: ["Lats", "Mid Back", "Rear Delt", "Biceps"] },
+      { label: "Day 6 — Legs B", muscles: ["Quads", "Glutes", "Hamstrings", "Calves", "Abs"] },
+    ],
+  },
+  {
+    id: "phul",
+    name: "PHUL — Power & Hypertrophy",
+    description: "يومان قوة (أوزان تقيلة) + يومين ضخامات، توازن ممتاز",
+    level: "Intermediate",
+    days: 4,
+    split: "Power/Hypertrophy",
+    daysPlan: [
+      { label: "Day 1 — Upper Power", muscles: ["Chest", "Back", "Shoulders", "Triceps"] },
+      { label: "Day 2 — Lower Power", muscles: ["Quads", "Hamstrings", "Calves"] },
+      { label: "Day 3 — Upper Hypertrophy", muscles: ["Chest", "Lats", "Side Delt", "Biceps", "Triceps"] },
+      { label: "Day 4 — Lower Hypertrophy", muscles: ["Quads", "Hamstrings", "Glutes", "Calves", "Abs"] },
+    ],
+  },
+  {
+    id: "arnold",
+    name: "Arnold Split — 6x/Week",
+    description: "الكلاسيك الذهبية: صدر/ضهر، كتف/باي/تراي، رجلين × مرتين",
+    level: "Advanced",
+    days: 6,
+    split: "Arnold",
+    daysPlan: [
+      { label: "Day 1 — Chest & Back", muscles: ["Chest", "Back", "Lats"] },
+      { label: "Day 2 — Shoulders & Arms", muscles: ["Shoulders", "Biceps", "Triceps", "Traps"] },
+      { label: "Day 3 — Legs", muscles: ["Quads", "Hamstrings", "Glutes", "Calves"] },
+      { label: "Day 4 — Chest & Back", muscles: ["Chest", "Lats", "Mid Back"] },
+      { label: "Day 5 — Shoulders & Arms", muscles: ["Shoulders", "Side Delt", "Biceps", "Triceps", "Forearms"] },
+      { label: "Day 6 — Legs", muscles: ["Quads", "Hamstrings", "Calves", "Abs"] },
+    ],
+  },
+  {
+    id: "strength5",
+    name: "5×5 Strength — 3x/Week",
+    description: "خطة قوة كلاسيكية، مركّزة على الأساسيات بأوزان تقيلة",
+    level: "Intermediate",
+    days: 3,
+    split: "A/B/C",
+    daysPlan: [
+      { label: "Day A — Squat Focus", muscles: ["Quads", "Chest", "Back"] },
+      { label: "Day B — Bench Focus", muscles: ["Chest", "Shoulders", "Hamstrings"] },
+      { label: "Day C — Deadlift Focus", muscles: ["Hamstrings", "Back", "Calves"] },
+    ],
+  },
+  {
+    id: "home",
+    name: "Home Dumbbell Plan",
+    description: "كل حاجاتها دمبل أو وزن الجسم — تتمرن بالبيت براحتك",
+    level: "Beginner",
+    days: 3,
+    split: "Home",
+    daysPlan: [
+      { label: "Day 1 — Push (Home)", muscles: ["Chest", "Shoulders", "Triceps"] },
+      { label: "Day 2 — Pull (Home)", muscles: ["Back", "Biceps", "Rear Delt"] },
+      { label: "Day 3 — Legs & Core (Home)", muscles: ["Quads", "Glutes", "Calves", "Abs"] },
+    ],
+  },
+  {
+    id: "cali",
+    name: "Calisthenics 3x/Week",
+    description: "وزن الجسم بس — قوة وتحكم من غير حد دمبل",
+    level: "Beginner",
+    days: 3,
+    split: "Bodyweight",
+    daysPlan: [
+      { label: "Day 1 — Upper Push", muscles: ["Chest", "Triceps", "Shoulders"] },
+      { label: "Day 2 — Upper Pull", muscles: ["Back", "Lats", "Biceps"] },
+      { label: "Day 3 — Core & Legs", muscles: ["Abs", "Quads", "Calves"] },
+    ],
+  },
 ];
 
 const buildEx = (lib: Omit<Exercise, "id">): Exercise => ({ ...lib, id: uid() });
@@ -438,7 +560,9 @@ const CheckIcon: React.FC<IconProps> = ({ size = 18 }) => (
 
 const ExerciseThumb: React.FC<{ name: string; muscle: string; size?: number; mode?: "photo" | "anatomy" }> = ({ name, muscle, size = 46, mode = "photo" }) => {
   const [failedPhoto, setFailedPhoto] = useState(false);
+  const [failedGif, setFailedGif] = useState(false);
   const [failedArt, setFailedArt] = useState(false);
+  const gif = EXERCISE_GIFS[name];
   const photo = EXERCISE_PHOTOS[name];
   const art = MUSCLE_IMG[muscle];
 
@@ -453,10 +577,18 @@ const ExerciseThumb: React.FC<{ name: string; muscle: string; size?: number; mod
     );
   }
 
-  if (photo && !failedPhoto) {
+  const mediaSrc = gif && !failedGif ? GIF_BASE + gif : photo && !failedPhoto ? PHOTO_BASE + photo : null;
+  if (mediaSrc) {
     return (
-      <div className="ex-thumb" style={{ width: size, height: size }} title={name}>
-        <img className="ex-art-photo" src={PHOTO_BASE + photo} alt={name} loading="lazy" decoding="async" onError={() => setFailedPhoto(true)} />
+      <div className="ex-thumb ex-thumb-media" style={{ width: size, height: size }} title={name}>
+        <img
+          className="ex-art-media"
+          src={mediaSrc}
+          alt={name}
+          loading="eager"
+          decoding="async"
+          onError={() => { if (gif && !failedGif && mediaSrc === GIF_BASE + gif) setFailedGif(true); else setFailedPhoto(true); }}
+        />
       </div>
     );
   }
@@ -527,6 +659,7 @@ const App: React.FC = () => {
   const [finishWeights, setFinishWeights] = useState<Record<string, number>>({});
   const [session, setSession] = useState<SessionState | null>(null);
   const [showDayPicker, setShowDayPicker] = useState(false);
+  const [tplFilter, setTplFilter] = useState("All");
   const [calMonth, setCalMonth] = useState(() => {
     const d = new Date();
     return { y: d.getFullYear(), m: d.getMonth() };
@@ -1172,34 +1305,46 @@ const App: React.FC = () => {
               </div>
             </div>
           </header>
-          <main className="main dash-main">
+          <main className="main dash-main tpl-main">
+            <div className="tpl-filters">
+              {["All", "Beginner", "Intermediate", "Advanced"].map(l => (
+                <button key={l} className={`tpl-filter ${tplFilter === l ? "tpl-filter-active" : ""}`} onClick={() => setTplFilter(l)}>
+                  {l === "All" ? "كل الخطط" : l === "Beginner" ? "مبتدئ" : l === "Intermediate" ? "متوسط" : "متقدم"}
+                </button>
+              ))}
+            </div>
             <div className="templates-grid">
-              {PLAN_TEMPLATES.map(t => (
+              {PLAN_TEMPLATES.filter(t => tplFilter === "All" || t.level === tplFilter).map(t => (
                 <div key={t.id} className="template-card">
-                  <div className="template-header">
-                    <div>
+                  <div className="tpl-top">
+                    <span className="tpl-count">{t.days}<em>يوم</em></span>
+                    <div className="tpl-head">
                       <h3 className="template-name">{t.name}</h3>
                       <p className="template-desc">{t.description}</p>
                     </div>
-                    <span className={`template-badge ${t.level === "Beginner" ? "badge-beginner" : t.level === "Advanced" ? "badge-advanced" : "badge-mid"}`}>{t.level}</span>
                   </div>
                   <div className="template-meta">
-                    <span className="template-pill">{t.days} أيام</span>
+                    <span className={`template-badge ${t.level === "Beginner" ? "badge-beginner" : t.level === "Advanced" ? "badge-advanced" : "badge-mid"}`}>{t.level === "Beginner" ? "مبتدئ" : t.level === "Intermediate" ? "متوسط" : "متقدم"}</span>
                     <span className="template-pill">{t.split}</span>
                   </div>
                   <div className="template-days">
-                    {t.daysPlan.slice(0, 3).map((dp, idx) => (
+                    {t.daysPlan.map((dp, idx) => (
                       <div key={idx} className="template-day-row">
                         <div className="template-day-dot" />
                         <span className="template-day-label">{dp.label}</span>
                       </div>
                     ))}
-                    {t.daysPlan.length > 3 && <span className="template-more">+{t.daysPlan.length - 3} أيام أخرى</span>}
                   </div>
-                  <button className="template-apply" onClick={() => applyTemplate(t)}>تطبيق الخطة</button>
+                  <button className="template-apply" onClick={() => applyTemplate(t)}>
+                    <CheckIcon size={14} />
+                    <span>طبّق على خطتي</span>
+                  </button>
                 </div>
               ))}
             </div>
+            {(tplFilter !== "All") && PLAN_TEMPLATES.filter(t => tplFilter === t.level).length === 0 && (
+              <p className="day-empty">مفيش خطط للمستوى ده</p>
+            )}
           </main>
           {navBar}
           {themeModal}
