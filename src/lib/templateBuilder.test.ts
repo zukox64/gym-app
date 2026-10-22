@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { buildPlanFromTemplate, isCompound, maxExercisesPerDay } from "./templateBuilder";
 import { PLAN_TEMPLATES } from "../data/templates";
+import { EXERCISE_LIBRARY } from "../data/exerciseLibrary";
+import type { LibraryEntry, PlanTemplate } from "../types";
 import { muscleGroupOf } from "../data/muscles";
 
 /* مكتبة مصغّرة للتست السريع — نفس شكل المكتبة الحقيقية (من غير معدات في A1) */
@@ -97,6 +99,45 @@ describe("compound قبل isolation", () => {
   });
 });
 
+describe("فلترة المعدات (A2)", () => {
+  const EQ_LIB: LibraryEntry[] = [
+    { name: "Barbell Squat", muscle: "Quads", sets: 4, reps: 8, equipment: ["Barbell"] },
+    { name: "Goblet Squat", muscle: "Quads", sets: 3, reps: 12, equipment: ["Dumbbell", "Kettlebell"] },
+    { name: "Bodyweight Squat", muscle: "Quads", sets: 3, reps: 20, equipment: ["Bodyweight"] },
+  ];
+  const tpl: PlanTemplate = {
+    id: "t", name: "t", description: "t", level: "Intermediate", days: 1, split: "t",
+    daysPlan: [{ label: "Legs", muscles: ["Quads"] }],
+  };
+
+  it("Bodyweight Only ⇒ الحركات بالجسم بس", () => {
+    const [day] = buildPlanFromTemplate(tpl, EQ_LIB, ["Bodyweight Only"], "Intermediate");
+    expect(day.exercises.map(e => e.name)).toEqual(["Bodyweight Squat"]);
+  });
+
+  it("Dumbbells ⇒ دمبل + وزن الجسم (من غير بار)", () => {
+    const [day] = buildPlanFromTemplate(tpl, EQ_LIB, ["Dumbbells"], "Intermediate");
+    const names = day.exercises.map(e => e.name);
+    expect(names).toContain("Goblet Squat");
+    expect(names).toContain("Bodyweight Squat");
+    expect(names).not.toContain("Barbell Squat");
+  });
+
+  it("Full Gym ⇒ كله متاح", () => {
+    const [day] = buildPlanFromTemplate(tpl, EQ_LIB, ["Full Gym"], "Advanced");
+    expect(day.exercises.length).toBe(3);
+  });
+
+  it("قالب Bodyweight بيمنع حركات البار حتى لو المستخدم عنده Full Gym", () => {
+    const caliTpl: PlanTemplate = { ...tpl, equipment: ["Bodyweight", "Pull-up Bar"] };
+    const [day] = buildPlanFromTemplate(caliTpl, EQ_LIB, ["Full Gym"], "Intermediate");
+    const names = day.exercises.map(e => e.name);
+    expect(names).toContain("Bodyweight Squat");
+    expect(names).not.toContain("Barbell Squat");
+    expect(names).not.toContain("Goblet Squat");
+  });
+});
+
 describe("معرّفات فريدة", () => {
   it("كل استدعاء بيطلع أيديات مختلفة", () => {
     const t = PLAN_TEMPLATES[0];
@@ -107,4 +148,22 @@ describe("معرّفات فريدة", () => {
     expect(new Set(idsA).size).toBe(idsA.length);
     expect(new Set([...idsA, ...idsB]).size).toBe(idsA.length + idsB.length);
   });
+});
+
+describe("المكتبة الحقيقية: كل قالب × كل معدات — مفيش يوم فاضي", () => {
+  for (const t of PLAN_TEMPLATES) {
+    const kits: string[][] = [["Full Gym"], ["Dumbbells"], ["Barbell"], ["Bodyweight Only"], []];
+    for (const kit of kits) {
+      it(`${t.id} / ${kit.join(",") || "none"}`, () => {
+        for (const level of ["Beginner", "Intermediate", "Advanced"]) {
+          const built = buildPlanFromTemplate(t, EXERCISE_LIBRARY, kit, level);
+          for (const day of built) {
+            expect(day.exercises.length).toBeGreaterThan(0);
+            const names = day.exercises.map((e) => e.name);
+            expect(new Set(names).size).toBe(names.length);
+          }
+        }
+      });
+    }
+  }
 });

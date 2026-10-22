@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { buildPlanFromTemplate } from "./lib/templateBuilder";
 import { PLAN_TEMPLATES } from "./data/templates";
+import { EXERCISE_LIBRARY } from "./data/exerciseLibrary";
+import { EQUIPMENT_OPTIONS } from "./data/equipment";
+import { equipmentCompatible } from "./lib/templateBuilder";
 import { uid } from "./lib/id";
 import type {
   LoggedExercise,
@@ -37,41 +40,6 @@ const MUSCLE_ICONS: Record<string, string> = {
   "Upper Abs": "🧱",
   "Lower Abs": "🧱",
 };
-
-const EXERCISE_LIBRARY: Omit<Exercise, "id">[] = [
-  { name: "Barbell Bench Press", muscle: "Chest", icon: " bench-press ", sets: 4, reps: 8 },
-  { name: "Incline Dumbbell Press", muscle: "Chest", icon: " incline-db ", sets: 3, reps: 10 },
-  { name: "Cable Fly", muscle: "Chest", icon: " cable-fly ", sets: 3, reps: 12 },
-  { name: "Push-ups", muscle: "Chest", icon: " pushup ", sets: 3, reps: 15 },
-  { name: "Dumbbell Rows", muscle: "Back", icon: " db-row ", sets: 4, reps: 10 },
-  { name: "Lat Pulldown", muscle: "Back", icon: " lat-pull ", sets: 3, reps: 12 },
-  { name: "Pull-ups", muscle: "Back", icon: " pullup ", sets: 3, reps: 8 },
-  { name: "Seated Cable Row", muscle: "Back", icon: " cable-row ", sets: 3, reps: 12 },
-  { name: "Overhead Press", muscle: "Shoulders", icon: " ohp ", sets: 4, reps: 8 },
-  { name: "Lateral Raise", muscle: "Side Delt", icon: " lat-raise ", sets: 3, reps: 15 },
-  { name: "Front Raise", muscle: "Front Delt", icon: " front-raise ", sets: 3, reps: 12 },
-  { name: "Face Pull", muscle: "Rear Delt", icon: " face-pull ", sets: 3, reps: 15 },
-  { name: "Barbell Curl", muscle: "Biceps", icon: " curl ", sets: 3, reps: 10 },
-  { name: "Hammer Curl", muscle: "Biceps", icon: " hammer ", sets: 3, reps: 12 },
-  { name: "Preacher Curl", muscle: "Biceps", icon: " preacher ", sets: 3, reps: 10 },
-  { name: "Tricep Pushdown", muscle: "Triceps", icon: " pushdown ", sets: 3, reps: 12 },
-  { name: "Skull Crushers", muscle: "Triceps", icon: " skull ", sets: 3, reps: 10 },
-  { name: "Overhead Extension", muscle: "Triceps", icon: " overhead-tri ", sets: 3, reps: 12 },
-  { name: "Barbell Squat", muscle: "Quads", icon: " squat ", sets: 4, reps: 8 },
-  { name: "Leg Press", muscle: "Quads", icon: " leg-press ", sets: 3, reps: 12 },
-  { name: "Leg Extension", muscle: "Quads", icon: " leg-ext ", sets: 3, reps: 15 },
-  { name: "Romanian Deadlift", muscle: "Hamstrings", icon: " rdl ", sets: 4, reps: 8 },
-  { name: "Leg Curl", muscle: "Hamstrings", icon: " leg-curl ", sets: 3, reps: 12 },
-  { name: "Hip Thrust", muscle: "Glutes", icon: " hip-thrust ", sets: 3, reps: 12 },
-  { name: "Bulgarian Split Squat", muscle: "Glutes", icon: " bulgarian ", sets: 3, reps: 10 },
-  { name: "Calf Raise", muscle: "Calves", icon: " calf-raise ", sets: 4, reps: 15 },
-  { name: "Crunches", muscle: "Abs", icon: " crunch ", sets: 3, reps: 20 },
-  { name: "Hanging Leg Raise", muscle: "Abs", icon: " leg-raise ", sets: 3, reps: 12 },
-  { name: "Plank", muscle: "Abs", icon: " plank ", sets: 3, reps: 60 },
-  { name: "Russian Twist", muscle: "Obliques", icon: " russian ", sets: 3, reps: 20 },
-  { name: "Farmer's Walk", muscle: "Forearms", icon: " farmer ", sets: 3, reps: 40 },
-  { name: "Barbell Shrug", muscle: "Traps", icon: " shrug ", sets: 3, reps: 12 },
-];
 
 const STORAGE_KEY = "gym-profile-v2";
 const PLAN_KEY = "gym-plan-v2";
@@ -419,6 +387,7 @@ const App: React.FC = () => {
   const [pickerDayId, setPickerDayId] = useState<string | null>(null);
   const [pickerSearch, setPickerSearch] = useState("");
   const [pickerFilter, setPickerFilter] = useState("All");
+  const [showAllEquip, setShowAllEquip] = useState(false);
   const [newDayLabel, setNewDayLabel] = useState("");
   const [showAddDay, setShowAddDay] = useState(false);
   const [renamingDay, setRenamingDay] = useState<string | null>(null);
@@ -731,6 +700,8 @@ const App: React.FC = () => {
   const fmtVolume = (v: number) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : `${Math.round(v)}`;
 
   const filteredLibrary = EXERCISE_LIBRARY.filter(e => {
+    // A2: افتراضيًا نعرض الحركات اللي تنفع مع معدات المستخدم، مع زر "Show all"
+    if (!showAllEquip && profile && !equipmentCompatible(e, profile.equipment)) return false;
     if (pickerFilter !== "All" && e.muscle !== pickerFilter) return false;
     if (pickerSearch && !e.name.toLowerCase().includes(pickerSearch.toLowerCase())) return false;
     return true;
@@ -862,7 +833,7 @@ const App: React.FC = () => {
                 ))}
               </div>
               <h2 className="question-title ob-subheading">Equipment?</h2>
-              {["Full Gym", "Dumbbells", "Barbell", "Bodyweight Only"].map(item => (
+              {EQUIPMENT_OPTIONS.map(item => (
                 <label key={item} className={`option ${equipment.includes(item) ? "option-selected" : ""}`}>
                   <input type="checkbox" checked={equipment.includes(item)} onChange={() => toggleEquipment(item)} /><span>{item}</span>
                 </label>
@@ -1474,6 +1445,8 @@ const App: React.FC = () => {
                 <button key={f} className={`picker-filter ${pickerFilter === f ? "picker-filter-active" : ""}`}
                   onClick={() => setPickerFilter(f)}>{f}</button>
               ))}
+              <button className={`picker-filter ${showAllEquip ? "picker-filter-active" : ""}`}
+                onClick={() => setShowAllEquip(v => !v)}>{showAllEquip ? "الكل بالكامل" : "حسب معداتي"}</button>
             </div>
 
             <div className="picker-list">

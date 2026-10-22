@@ -14,6 +14,7 @@
 
 import type { BuiltPlanDay, Exercise, Equipment, PlanTemplate } from "../types";
 import { muscleGroupOf } from "../data/muscles";
+import { grantedKits, isFullGym } from "../data/equipment";
 import { uid } from "./id";
 
 export type LibraryEntryLike = Omit<Exercise, "id"> & { equipment?: Equipment[] };
@@ -74,7 +75,7 @@ export const isCompound = (name: string): boolean => {
  * توافق المعدات (A2):
  *  - حركة من غير معدات ⇒ متاحة للكل (بيانات قديمة).
  *  - "Full Gym" أو قائمة معدات فاضية ⇒ كل شيء متاح.
- *  - غير كده: لازم تقاطع بين معدات الحركة والمتاحة للمستخدم.
+ *  - غير كده: لازم تقاطع بين معدات الحركة والأدوات الممنوحة للمستخدم.
  */
 export const equipmentCompatible = (
   ex: { equipment?: Equipment[] },
@@ -82,8 +83,19 @@ export const equipmentCompatible = (
 ): boolean => {
   if (!ex.equipment || ex.equipment.length === 0) return true;
   if (available.length === 0) return true;
-  if (available.some((a) => a.toLowerCase() === "full gym")) return true;
-  return ex.equipment.some((eq) => available.some((a) => a.toLowerCase() === eq.toLowerCase()));
+  if (isFullGym(available)) return true;
+  const kits = grantedKits(available);
+  return ex.equipment.some((eq) => kits.includes(eq));
+};
+
+/** توافق الحركة مع معدات القالب نفسه (undefined = كل حاجة) — A2 */
+export const templateCompatible = (
+  ex: { equipment?: Equipment[] },
+  template: { equipment?: Equipment[] },
+): boolean => {
+  if (!template.equipment || template.equipment.length === 0) return true;
+  if (!ex.equipment || ex.equipment.length === 0) return true;
+  return ex.equipment.some((eq) => template.equipment!.includes(eq));
 };
 
 /** الحد الأقصى لعدد التمارين في اليوم حسب مستوى المتدرب */
@@ -174,8 +186,10 @@ export function buildPlanFromTemplate(
     const idealPools = buildPools(groups, library);
     const ideal = pickRoundRobin(groups, idealPools, cap).length;
 
-    // الاختيار الفعلي مطبّق فيه فلترة المعدات
-    const realPools = buildPools(groups, library, (ex) => equipmentCompatible(ex, availableEquipment));
+    // الاختيار الفعلي مطبّق فيه فلترة معدات المستخدم + معدات القالب
+    const realPools = buildPools(groups, library, (ex) =>
+      equipmentCompatible(ex, availableEquipment) && templateCompatible(ex, template),
+    );
     const picked = pickRoundRobin(groups, realPools, cap);
 
     const exercises: Exercise[] = picked.map((ex) => ({ ...ex, id: uid() }));

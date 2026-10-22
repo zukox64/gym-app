@@ -142,7 +142,7 @@ export const PLAN_TEMPLATES: PlanTemplate[] = [
     level: "Beginner",
     days: 3,
     split: "Home",
-    daysPlan: [
+    equipment: ["Dumbbell", "Bodyweight", "Bench", "Pull-up Bar"],    daysPlan: [
       { label: "Day 1 — Push (Home)", muscles: ["Chest", "Shoulders", "Triceps"] },
       { label: "Day 2 — Pull (Home)", muscles: ["Back", "Biceps", "Rear Delt"] },
       { label: "Day 3 — Legs & Core (Home)", muscles: ["Quads", "Glutes", "Calves", "Abs"] },
@@ -155,6 +155,7 @@ export const PLAN_TEMPLATES: PlanTemplate[] = [
     level: "Beginner",
     days: 3,
     split: "Bodyweight",
+    equipment: ["Bodyweight", "Pull-up Bar"],
     daysPlan: [
       { label: "Day 1 — Upper Push", muscles: ["Chest", "Triceps", "Shoulders"] },
       { label: "Day 2 — Upper Pull", muscles: ["Back", "Lats", "Biceps"] },

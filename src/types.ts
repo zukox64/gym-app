@@ -67,6 +67,8 @@ export interface PlanTemplate {
   level: string;
   days: number;
   split: string;
+  /** المعدات المسموح بيها في التطبيل (undefined = كل حاجة) — A2 */
+  equipment?: Equipment[];
   daysPlan: { label: string; muscles: string[] }[];
 }
 
