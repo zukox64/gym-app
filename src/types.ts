@@ -106,8 +106,11 @@ export interface SessionState {
   dayId: string;
   label: string;
   startedAt: number;
+  /** جُمّعة الراحة (ثواني) — بتتراكم لما الراحة تقفل (A3) */
   restSec: number;
   items: SessionItem[];
   currentIdx: number;
-  restLeft: number | null;
+  /** الراحة النشطة — طابع زمني بالمللي (timestamp math بدل العدّاد) (A3) */
+  restEndsAt: number | null;
+  restStartedAt: number | null;
 }

@@ -166,8 +166,6 @@ const THEMES: { key: ThemeKey; label: string; swatch: string }[] = [
 /* ===== Workout logging ===== */
 const LOG_KEY = "gym-logs-v1";
 
-const REST_SECONDS = 90;
-
 const todayKey = (d = new Date()) => {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -403,6 +401,7 @@ const App: React.FC = () => {
   const [dayToFinish, setDayToFinish] = useState<WorkoutDay | null>(null);
   const [finishWeights, setFinishWeights] = useState<Record<string, number>>({});
   const [session, setSession] = useState<SessionState | null>(null);
+  const [nowTime, setNowTime] = useState(Date.now());
   const [showDayPicker, setShowDayPicker] = useState(false);
   const [tplFilter, setTplFilter] = useState("All");
   const [calMonth, setCalMonth] = useState(() => {
@@ -421,18 +420,21 @@ const App: React.FC = () => {
     return () => window.clearTimeout(t);
   }, [toast]);
 
-  // ساعة الوضع التدريبي — تحديث كل ثانية
+  // ==== لساعة السيشن: tick عام (يحدّث `nowTime` للعدادات) + ترانزشن نهاية الراحة.
+  // العدّ بالطوابع الزمنية مش بشمار — الاستمرار صح حتى لو التاب اتعملله sleep (A3)
+  const sessionActive = session !== null;
   useEffect(() => {
-    if (!session) return;
+    if (!sessionActive) return;
     const id = window.setInterval(() => {
+      const now = Date.now();
+      setNowTime(now);
       setSession(s => {
-        if (!s) return s;
-        if (s.restLeft && s.restLeft > 0) return { ...s, restLeft: s.restLeft - 1, restSec: s.restSec + 1 };
-        return s;
+        if (!s || !s.restEndsAt || s.restEndsAt > now) return s;
+        return closeRest(s, now);
       });
-    }, 1000);
+    }, 250);
     return () => window.clearInterval(id);
-  }, [!!session]);
+  }, [sessionActive]);
 
   useEffect(() => {
     try {
@@ -447,9 +449,61 @@ const App: React.FC = () => {
       const l = localStorage.getItem(LOG_KEY);
       if (l) setLogs(JSON.parse(l));
     } catch { /* ignore */ }
+    // A3: استعادة السيشن الحية بعد الريفرش — مع فاليديشن уровة الشكل والمجوّد المخزّن فاشل نرمي
+    setSession(restoreSession());
   }, []);
 
+  // A3: حفظ السيشن الحية وكل تغييرها، ومسحها لما تخلص/تتلغي
+  useEffect(() => {
+    try {
+      if (!session) localStorage.removeItem(SESSION_KEY);
+      else localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    } catch { /* ignore */ }
+  }, [session]);
+
   const savePlan = (d: WorkoutDay[]) => { setDays(d); localStorage.setItem(PLAN_KEY, JSON.stringify(d)); };
+
+  /* ===== A3: السيشن الحية ===== */
+  const SESSION_KEY = "gym-session-v1";
+  const REST_SECONDS = 90;
+
+  /** يقفل الراحة الجارية (لو شغالة) ويجمّع ثوانيها في restSec — حسابات طوابع زمنية */
+  const closeRest = (s: SessionState, at?: number): SessionState => {
+    if (!s.restEndsAt) return s;
+    const now = at ?? Date.now();
+    const spent = Math.max(0, Math.round((Math.min(now, s.restEndsAt) - (s.restStartedAt ?? s.restEndsAt)) / 1000));
+    return { ...s, restSec: s.restSec + spent, restEndsAt: null, restStartedAt: null };
+  };
+
+  /** استعادة السيشن من التخزين مع فاليديشن بسيطة — داتا فاسدة ⇒ تجاهل */
+  const restoreSession = (): SessionState | null => {
+    try {
+      const raw = localStorage.getItem(SESSION_KEY);
+      if (!raw) return null;
+      const v: unknown = JSON.parse(raw);
+      if (!v || typeof v !== "object") return null;
+      const r = v as Partial<SessionState>;
+      if (
+        typeof r.dayId !== "string" ||
+        typeof r.label !== "string" ||
+        typeof r.startedAt !== "number" ||
+        typeof r.currentIdx !== "number" ||
+        !Array.isArray(r.items)
+      ) return null;
+      return {
+        dayId: r.dayId,
+        label: r.label,
+        startedAt: r.startedAt,
+        restSec: typeof r.restSec === "number" ? r.restSec : 0,
+        items: r.items.filter(it => it && typeof it.name === "string"),
+        currentIdx: r.currentIdx,
+        restEndsAt: typeof r.restEndsAt === "number" ? r.restEndsAt : null,
+        restStartedAt: typeof r.restStartedAt === "number" ? r.restStartedAt : null,
+      };
+    } catch {
+      return null;
+    }
+  };
 
   const toggleEquipment = (item: string) =>
     setEquipment(p => p.includes(item) ? p.filter(i => i !== item) : [...p, item]);
@@ -598,7 +652,7 @@ const App: React.FC = () => {
     setSession({
       dayId: day.id, label: day.label, startedAt: Date.now(), restSec: 0,
       items: day.exercises.map(e => ({ id: e.id, name: e.name, muscle: e.muscle, sets: e.sets, reps: e.reps, weight: e.weight || 0, doneSets: 0 })),
-      currentIdx: 0, restLeft: null,
+      currentIdx: 0, restEndsAt: null, restStartedAt: null,
     });
     setShowDayPicker(false);
     setExpandedDay(null);
@@ -613,40 +667,45 @@ const App: React.FC = () => {
   };
 
   const sessionNext = () => {
+    const now = Date.now();
     setSession(s => {
       if (!s) return s;
-      if (s.currentIdx >= s.items.length - 1) return { ...s, restLeft: null };
-      return { ...s, currentIdx: s.currentIdx + 1, restLeft: REST_SECONDS };
+      const closed = closeRest(s, now);
+      if (closed.currentIdx >= closed.items.length - 1) return closed;
+      // A3: راحة على مدار طابع زمني — صحيحة حتى مع sleep/ثروتتل
+      return { ...closed, currentIdx: closed.currentIdx + 1, restEndsAt: now + REST_SECONDS * 1000, restStartedAt: now };
     });
   };
 
   const sessionPrev = () => {
+    const now = Date.now();
     setSession(s => {
       if (!s) return s;
       if (s.currentIdx === 0) return s;
-      return { ...s, currentIdx: s.currentIdx - 1, restLeft: null };
+      return { ...closeRest(s, now), currentIdx: s.currentIdx - 1 };
     });
   };
 
   const finishSession = () => {
     if (!session) return;
-    const elapsed = Math.floor((Date.now() - session.startedAt) / 1000);
-    const logged: LoggedExercise[] = session.items.map(it => ({
+    const closed = closeRest(session); // A3: جمّع أي راحة جارية قبل الحساب
+    const elapsed = Math.floor((Date.now() - closed.startedAt) / 1000);
+    const logged: LoggedExercise[] = closed.items.map(it => ({
       name: it.name, muscle: it.muscle, sets: it.doneSets > 0 ? it.doneSets : it.sets, reps: it.reps, weight: it.weight,
     }));
     const volume = logged.reduce((s, e) => s + e.sets * e.reps * e.weight, 0);
     const entry: WorkoutLog = {
-      id: uid(), date: todayKey(), dayId: session.dayId,
-      dayLabel: session.label, exercises: logged, volume, duration: elapsed, rest: session.restSec,
+      id: uid(), date: todayKey(), dayId: closed.dayId,
+      dayLabel: closed.label, exercises: logged, volume, duration: elapsed, rest: closed.restSec,
     };
     saveLogs([entry, ...logs]);
 
     // الصق الأوزان الجديدة في الخطة
-    savePlan(days.map(d => d.id === session.dayId
-      ? { ...d, exercises: d.exercises.map(e => { const it = session.items.find(x => x.id === e.id); return it ? { ...e, weight: it.weight } : e; }) }
+    savePlan(days.map(d => d.id === closed.dayId
+      ? { ...d, exercises: d.exercises.map(e => { const it = closed.items.find(x => x.id === e.id); return it ? { ...e, weight: it.weight } : e; }) }
       : d));
 
-    setSession(null);
+    setSession(null); // الإفكت بيمسح gym-session-v1
     setToast(`تم التسجيل 💪 ${fmtClock(elapsed)}`);
   };
 
@@ -875,7 +934,9 @@ const App: React.FC = () => {
   // ===== شاشة التمرين الحية =====
   if (session) {
     const cur = session.items[session.currentIdx];
-    const elapsed = Math.floor((Date.now() - session.startedAt) / 1000);
+    // A3: العدادات كلها من الطوابع الزمنية — صح حتى بعد sleep
+    const elapsed = Math.floor((nowTime - session.startedAt) / 1000);
+    const liveRestLeft = session.restEndsAt ? Math.max(0, Math.ceil((session.restEndsAt - nowTime) / 1000)) : 0;
     const totalSets = session.items.reduce((a, i) => a + i.sets, 0);
     const doneSetsAll = session.items.reduce((a, i) => a + Math.min(i.doneSets, i.sets), 0);
 
@@ -898,15 +959,15 @@ const App: React.FC = () => {
               <span className="sess-timer-label">وقت التمرين</span>
               <strong className="sess-timer-val">{fmtClock(elapsed)}</strong>
             </div>
-            <div className={`sess-timer ${session.restLeft ? "sess-timer-live" : ""}`}>
-              <span className="sess-timer-label">{session.restLeft ? "استراحة كمان" : "وقت البريك"}</span>
-              <strong className="sess-timer-val">{fmtClock(session.restLeft ?? session.restSec)}</strong>
+            <div className={`sess-timer ${liveRestLeft > 0 ? "sess-timer-live" : ""}`}>
+              <span className="sess-timer-label">{liveRestLeft > 0 ? "استراحة كمان" : "وقت البريك"}</span>
+              <strong className="sess-timer-val">{fmtClock(liveRestLeft > 0 ? liveRestLeft : session.restSec)}</strong>
             </div>
           </div>
 
-          {session.restLeft && (
-            <button className="rest-skip" onClick={() => setSession(s => s ? { ...s, restLeft: null } : s)}>
-              <span>استراحة جارية · {fmtClock(session.restLeft)}</span>
+          {liveRestLeft > 0 && (
+            <button className="rest-skip" onClick={() => { const at = Date.now(); setNowTime(at); setSession(s => (s ? closeRest(s, at) : s)); }}>
+              <span>استراحة جارية · {fmtClock(liveRestLeft)}</span>
               <strong>تخطّي الاستراحة</strong>
             </button>
           )}
@@ -962,7 +1023,7 @@ const App: React.FC = () => {
             <div className="sess-list">
               {session.items.map((it, i) => (
                 <button key={it.id} className={`sess-row ${i === session.currentIdx ? "sess-row-now" : i < session.currentIdx ? "sess-row-done" : ""}`}
-                  onClick={() => setSession(s => s ? { ...s, currentIdx: i, restLeft: null } : s)}>
+                  onClick={() => { const at = Date.now(); setSession(s => (s ? { ...closeRest(s, at), currentIdx: i } : s)); }}>
                   <span className="sess-row-idx">{i < session.currentIdx ? "✓" : i + 1}</span>
                   <span className="sess-row-name">{it.name}</span>
                   <span className="sess-row-sets">{it.sets}×{it.reps}</span>
