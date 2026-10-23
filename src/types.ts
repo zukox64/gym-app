@@ -31,6 +31,8 @@ export interface UserProfile {
   equipment: string[];
   /** الاستراحة الافتراضية بالثواني (B1) — اختيارية للحفاظ على التوافق مع النسخ القديمة */
   restSeconds?: number;
+  /** R2-4: صوت بيب عند نهاية الاستراحة (WebAudio) */
+  restBeep?: boolean;
 }
 
 /** حركة في خطة المستخدم */
@@ -43,6 +45,8 @@ export interface Exercise {
   sets: number;
   reps: number;
   weight?: number;
+  /** R2-4: ملاحظة على التمرين (تظهر في السيشن والتعديل) */
+  note?: string;
 }
 
 /** حركة في مكتبة التمارين (بيتبني منها Exercise بإضافة id) */
@@ -80,6 +84,10 @@ export interface LoggedExercise {
   sets: number;
   reps: number;
   weight: number;
+  /** R2-4: عدّة-عدّة (w×r لكل مجموعة) — اختيارية: اللوجز القديمة بدونها شغالة (migration-safe) */
+  setsDone?: { w: number; r: number }[];
+  /** R2-4: ملاحظة التمرين المنسوخة من الخطة */
+  note?: string;
 }
 
 export interface WorkoutLog {
@@ -93,7 +101,7 @@ export interface WorkoutLog {
   rest?: number;
 }
 
-/** مسجل سِت فردي داخل السيشن (B1 هيتوسّع) */
+/** حركة داخل السيشن الحية (R2-4: per-set logging) */
 export interface SessionItem {
   id: string;
   name: string;
@@ -102,6 +110,12 @@ export interface SessionItem {
   reps: number;
   weight: number;
   doneSets: number;
+  /** R2-4: عدّة-عدّة — بتتعبأ أثناء الجلسة */
+  setsDone: { w: number; r: number }[];
+  /** R2-4: استراحة التمرين ده (compound 150s وإلا الافتراضي) */
+  restSec: number;
+  /** R2-4: ملاحظة من الخطة */
+  note?: string;
 }
 
 export interface SessionState {

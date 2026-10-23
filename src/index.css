@@ -1302,3 +1302,43 @@ body { transition: background .3s ease; }
 /* عدّة PR بادج نبض */
 .pr-flash { animation: pr-flash 900ms var(--ease-out) 1; border-color: var(--brand-line); }
 @keyframes pr-flash { 0% { box-shadow: 0 0 0 0 var(--brand-glow); } 60% { box-shadow: 0 0 0 10px transparent; } }
+
+/* ══════════════════════════════════════════════════════════
+   R2-4: جلسة التمرين — per-set editor + rest v2 + overload
+   ══════════════════════════════════════════════════════════ */
+
+.set-editor { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.set-editor-cols { display: grid; grid-template-columns: 1.4fr 1fr; gap: 10px; }
+.set-editor-col { display: flex; flex-direction: column; gap: 6px; align-items: center;
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 10px 8px; }
+.set-editor-label { font-size: var(--fs-2xs); font-weight: var(--fw-bold); color: var(--text-dim); }
+.set-editor-val { display: flex; align-items: baseline; gap: 4px; min-height: 44px; }
+.set-editor-val em { font-style: normal; font-size: var(--fs-xs); color: var(--text-dim); font-weight: var(--fw-bold); }
+.stepper-hold { display: flex; align-items: center; gap: 10px; width: 100%; justify-content: center; }
+.stepper-hold .stepper-btn { width: 40px; height: 40px; }
+.quick-chips { display: flex; gap: 6px; }
+
+.sets-done-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.sets-done-chips .chip { min-width: 40px; justify-content: center; }
+.sets-done-chips .sets-next { border-style: dashed; color: var(--text-muted); }
+.undo-set-btn { align-self: flex-start; background: none; border: none; color: var(--text-dim);
+  font-family: inherit; font-size: var(--fs-xs); font-weight: var(--fw-bold); cursor: pointer; padding: 2px 4px; }
+.undo-set-btn:hover { color: var(--text); }
+
+.sess-meta-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+.sess-note { font-size: var(--fs-sm); color: var(--text-dim); background: var(--brand-weak);
+  border: 1px solid var(--brand-line); border-radius: var(--r-sm); padding: 8px 10px; margin: 8px 0 0; }
+.overload-hint { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: var(--brand-weak); border: 1px solid var(--brand-line); border-radius: var(--r-sm);
+  padding: 10px 12px; font-size: var(--fs-sm); color: var(--text); margin-top: 10px; }
+.overload-hint .chip { flex-shrink: 0; cursor: pointer; }
+
+.rest-card-v2 { display: flex; align-items: center; gap: 14px; padding: 14px; }
+.rest-ring-val { font-size: 20px; font-weight: var(--fw-heavy); color: var(--brand); }
+.rest-actions { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.rest-actions .chip { justify-content: center; cursor: pointer; padding: 9px 10px; font-size: var(--fs-sm); }
+
+.set-pop-host { position: relative; overflow: visible; }
+.set-pop-host::after { content: ""; position: absolute; inset: -4px; border-radius: inherit;
+  border: 2px solid var(--brand-line); opacity: 0; pointer-events: none; }
+.set-pop-host:active:not(:disabled)::after { opacity: 1; }

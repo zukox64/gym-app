@@ -3,8 +3,22 @@
  */
 
 import type { SessionState } from "../types";
+import { DEFAULT_REST_SECONDS } from "../config";
+import { exerciseRest } from "./training";
 
 export const SESSION_VALIDATED_KEYS = ["dayId", "label", "startedAt", "items", "currentIdx"] as const;
+
+/** R2-4: السيشن المحفوظة بنسخة أقدم (قبل per-set) بتتملّى بحقولها الجديدة — migration-safe */
+export const normalizeSession = (s: SessionState, defaultRest = DEFAULT_REST_SECONDS): SessionState => ({
+  ...s,
+  items: s.items.map(it => ({
+    ...it,
+    doneSets: it.doneSets ?? 0,
+    setsDone: Array.isArray(it.setsDone) ? it.setsDone : [],
+    restSec: it.restSec && it.restSec > 0 ? it.restSec : exerciseRest(it.name ?? "", defaultRest),
+    note: typeof it.note === "string" ? it.note : undefined,
+  })),
+});
 
 /** يقفل الراحة الجارية ويجمّع ثوانيها في restSec — طوابع زمنية، صحيح حتى بعد sleep */
 export const closeRest = (s: SessionState, at?: number): SessionState => {
@@ -29,7 +43,7 @@ export const restoreSession = (): SessionState | null => {
       typeof r.currentIdx !== "number" ||
       !Array.isArray(r.items)
     ) return null;
-    return {
+    return normalizeSession({
       dayId: r.dayId,
       label: r.label,
       startedAt: r.startedAt,
@@ -38,7 +52,7 @@ export const restoreSession = (): SessionState | null => {
       currentIdx: r.currentIdx,
       restEndsAt: typeof r.restEndsAt === "number" ? r.restEndsAt : null,
       restStartedAt: typeof r.restStartedAt === "number" ? r.restStartedAt : null,
-    };
+    });
   } catch {
     return null;
   }

@@ -132,10 +132,17 @@ export default function App() {
     if (!session) return;
     const closed = closeRest(session);
     const elapsed = Math.floor((Date.now() - closed.startedAt) / 1000);
+    /** R2-4: البناء من setsDone لو موجودة (per-set) وإلا fallback القديم */
     const logged: LoggedExercise[] = closed.items.map(it => ({
-      name: it.name, muscle: it.muscle, sets: it.doneSets > 0 ? it.doneSets : it.sets, reps: it.reps, weight: it.weight,
+      name: it.name, muscle: it.muscle,
+      sets: it.doneSets > 0 ? it.doneSets : it.sets,
+      reps: it.reps, weight: it.weight,
+      setsDone: it.setsDone.length > 0 ? it.setsDone : undefined,
+      note: it.note,
     }));
-    const volume = logged.reduce((s, e) => s + e.sets * e.reps * e.weight, 0);
+    const volume = logged.reduce((s, e) => s + (e.setsDone?.length
+      ? e.setsDone.reduce((sv, st) => sv + st.w * st.r, 0)
+      : e.sets * e.reps * e.weight), 0);
     const entry: WorkoutLog = {
       id: uid(), date: todayKey(), dayId: closed.dayId,
       dayLabel: closed.label, exercises: logged, volume, duration: elapsed, rest: closed.restSec,
@@ -201,7 +208,7 @@ export default function App() {
   if (api.session) {
     return (
       <div className="app session-page">
-        <WorkoutSession api={api} unit={profile.weightUnit} onFinish={finishSession} />
+        <WorkoutSession api={api} unit={profile.weightUnit} logs={logs} beep={profile.restBeep} onFinish={finishSession} />
         {toastEl}
       </div>
     );
