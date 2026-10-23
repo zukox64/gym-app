@@ -104,7 +104,6 @@ export const S = {
     // B7
     confirmDel: "متأكد؟ اضغط تاني",
     emptyRecent: "لسه مسجلتش تمرين",
-    // R2-4 حذف سجل مع تراجع
     // R2-5
     weeksBarTitle: "الوزن على الأسابيع",
     monthsAreaTitle: "حجم آخر 6 شهور",
@@ -187,6 +186,18 @@ export const S = {
     beep: "صوت نهاية الاستراحة",
     on: "شغال",
     off: "صامت",
+  },
+
+  /** R2-6: التثبيت + التحديث */
+  pwa: {
+    installTitle: "ثبّت التطبيق",
+    installSub: "دايرك تفتحه من غير المتصفح كل مرة؟",
+    installIosSteps: "اضغط زر المشاركة",
+    installIosAdd: "→ «إضافة لشاشة البداية»",
+    installCta: "تثبيت",
+    updateReady: "فيه نسخة جديدة من التطبيق",
+    updateBtn: "حدّث دلوقتي",
+    updateLater: "بعدين",
   },
 
   errorBoundary: {

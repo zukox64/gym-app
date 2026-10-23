@@ -17,6 +17,9 @@ import { ThemeModal } from "./components/ThemeModal";
 import { NavBar } from "./components/NavBar";
 import { SettingsModal } from "./components/SettingsModal";
 import { useBodyweight } from "./hooks/useBodyweight";
+import { useWakeLock } from "./hooks/useWakeLock";
+import { InstallCard } from "./components/InstallCard";
+import { useRegisterSW } from "virtual:pwa-register/react";
 import { useLocalStorage } from "./hooks/useLocalStorage";
 import { useTheme } from "./hooks/useTheme";
 import { useWorkoutLogs } from "./hooks/useWorkoutLogs";
@@ -57,6 +60,14 @@ export default function App() {
   const [showTheme, setShowTheme] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [toastState, setToastState] = useState<{ msg: string; undo?: () => void } | null>(null);
+  /** R2-6: لما الـ SW يشاور على نسخة جديدة */
+  const [swUpdate, setSwUpdate] = useState(false);
+  /* R2-6: Wake Lock — الشاشة صاحية وقت السيشن بس */
+  useWakeLock(!!api.session);
+  /* R2-6: تحديث بموافقة المستخدم (registerType: prompt) */
+  const sw = useRegisterSW({
+    onNeedRefresh: () => setSwUpdate(true),
+  });
 
   /* ===== تأثيرات عرضية ===== */
   useEffect(() => {
@@ -256,6 +267,15 @@ export default function App() {
     );
   }
 
+  /* R2-6: بانر التحديث — autoUpdate اترحّل لـ prompt بموافقة المستخدم */
+  const updateBanner = swUpdate ? (
+    <div className="update-banner" role="status" aria-live="polite">
+      <span>{S.pwa.updateReady}</span>
+      <button className="update-btn" onClick={() => sw.updateServiceWorker(true)}>{S.pwa.updateBtn}</button>
+      <button className="update-later" onClick={() => setSwUpdate(false)}>{S.pwa.updateLater}</button>
+    </div>
+  ) : null;
+
   const tabFall = (
   <div className="tab-loading" role="status" aria-label="جاري التحميل">
     <Skeleton h={26} w="55%" className="sk-title" />
@@ -310,6 +330,8 @@ export default function App() {
       )}
 
       <NavBar page={currentPage} onGo={setCurrentPage} />
+      {currentPage === "Home" && <InstallCard />}
+      {updateBanner}
       {themeModalEl}
       {settingsModalEl}
       {toastEl}

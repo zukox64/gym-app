@@ -8,8 +8,8 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      // E: PWA — تحديث تلقائي بدون ما المستخدم يبوظ بياناته (كلها localStorage)
-      registerType: 'autoUpdate',
+      // E/R2-6: تحديث بموافقة المستخدم — بانر «حدّث دلوقتي» بدل التطبيق الصامت
+      registerType: 'prompt',
       includeAssets: ['favicon.svg', 'icon.svg'],
       manifest: {
         name: 'Gym App — مدربك الشخصي',

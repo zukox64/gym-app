@@ -1446,3 +1446,30 @@ body { transition: background .3s ease; }
 .ach-unlocked.tier-gold { box-shadow: 0 0 0 1px var(--gold-line, var(--brand-line)); }
 .ach-name { font-size: var(--fs-2xs); font-weight: var(--fw-bold); color: var(--text); }
 .ach-date { font-size: var(--fs-3xs, 9px); color: var(--text-muted); font-weight: 700; }
+
+/* ══════════════════════════════════════════════════════════
+   R2-6: install card + update banner + wake-lock hint
+   ══════════════════════════════════════════════════════════ */
+
+.install-card { display: flex; align-items: center; gap: 12px; position: relative;
+  background: var(--brand-weak); border-color: var(--brand-line); }
+.install-icon { font-size: 30px; line-height: 1; }
+.install-copy { flex: 1; }
+.install-steps { font-size: var(--fs-xs); color: var(--text-dim); margin: 4px 0 0; line-height: 1.6; }
+.install-btn { flex-shrink: 0; display: flex; align-items: center; gap: 6px; }
+.install-close { position: absolute; top: 8px; left: 8px; background: none; border: none;
+  color: var(--text-muted); cursor: pointer; padding: 4px; }
+.install-close:hover { color: var(--text); }
+
+.update-banner { position: fixed; left: 50%; bottom: 74px; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 10px; z-index: 75;
+  background: var(--brand); color: var(--on-brand); border-radius: var(--r-full);
+  padding: 9px 10px 9px 22px; font-size: var(--fs-sm); font-weight: var(--fw-bold);
+  box-shadow: 0 16px 36px -14px var(--brand-glow); animation: toastIn .3s var(--ease-out) both;
+  max-width: calc(100% - 32px); }
+.update-btn { background: var(--on-brand); color: var(--brand); border: none;
+  border-radius: var(--r-full); font-family: inherit; font-size: var(--fs-2xs);
+  font-weight: var(--fw-heavy); padding: 7px 14px; cursor: pointer; flex-shrink: 0; }
+.update-later { background: none; border: none; color: var(--on-brand); opacity: .8;
+  font-family: inherit; font-size: var(--fs-2xs); font-weight: var(--fw-bold);
+  cursor: pointer; flex-shrink: 0; text-decoration: underline; }
