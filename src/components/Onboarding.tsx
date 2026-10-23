@@ -89,7 +89,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ existing, onSave, onCanc
   /* ===== الـ Hero ===== */
   if (!showIntro && !existing) {
     return (
-      <div className="hero" dir="rtl">
+      <main className="hero" dir="rtl">
         <div className="hero-orb hero-orb-1" />
         <div className="hero-orb hero-orb-2" />
         <div className="hero-inner">
@@ -121,13 +121,13 @@ export const Onboarding: React.FC<OnboardingProps> = ({ existing, onSave, onCanc
 
           <p className="hero-foot">{S.hero.foot}</p>
         </div>
-      </div>
+      </main>
     );
   }
 
   /* ===== الخطوات ===== */
   return (
-    <div className="onboarding">
+    <main className="onboarding">
       <div className="ob-topbar">
         {step > 1 ? (
           <button className="ob-back-btn" onClick={() => setStep(s => Math.max(1, s - 1))}><span className="arrow-l">‹</span></button>
@@ -243,6 +243,6 @@ export const Onboarding: React.FC<OnboardingProps> = ({ existing, onSave, onCanc
           </button>
         )}
       </div>
-    </div>
+    </main>
   );
 };
