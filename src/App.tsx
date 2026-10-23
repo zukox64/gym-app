@@ -23,6 +23,8 @@ import { useWorkoutLogs } from "./hooks/useWorkoutLogs";
 import { useWorkoutSession } from "./hooks/useWorkoutSession";
 import { DEFAULT_REST_SECONDS, REST_RANGE, STORAGE_KEYS } from "./config";
 import { makeBundle, parseBundle, sanitizePlan, sanitizeProfile } from "./lib/migrations";
+import { convertBodyUnit, convertLogsUnit, convertPlanUnit } from "./lib/unitMigration";
+import { convertWeight } from "./lib/training";
 import { closeRest } from "./lib/sessionUtils";
 import { fmtClock, todayKey } from "./lib/date";
 import { uid } from "./lib/id";
@@ -45,7 +47,7 @@ export default function App() {
     validate: sanitizePlan,
   });
   const { logs, setLogs, addLog } = useWorkoutLogs();
-  const { body, addBody } = useBodyweight();
+  const { body, addBody, setBody: setBodyList } = useBodyweight();
   const { theme, setTheme } = useTheme();
   // B1: الاستراحة الافتراضية من الملف الشخصي (fallback 90)
   const api = useWorkoutSession(profile?.restSeconds ?? DEFAULT_REST_SECONDS);
@@ -54,18 +56,20 @@ export default function App() {
   const [editingProfile, setEditingProfile] = useState(false);
   const [showTheme, setShowTheme] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [toast, setToast] = useState("");
+  const [toastState, setToastState] = useState<{ msg: string; undo?: () => void } | null>(null);
 
   /* ===== تأثيرات عرضية ===== */
   useEffect(() => {
-    if (!toast) return;
-    const t = window.setTimeout(() => setToast(""), 2600);
+    if (!toastState) return;
+    const t = window.setTimeout(() => setToastState(null), 2600);
     return () => window.clearTimeout(t);
-  }, [toast]);
+  }, [toastState]);
 
   /* ===== العمليات المشتركة ===== */
   const savePlan = (next: WorkoutDay[]) => setDays(next);
-  const onToast = (msg: string) => setToast(msg);
+  const onToast = (msg: string, undo?: () => void) => {
+    setToastState({ msg, undo });
+  };
 
   /* ===== A7: تصدير/استيراد ===== */
   const exportData = () => {
@@ -77,7 +81,7 @@ export default function App() {
     a.download = `gym-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    setToast(S.settings.exported);
+    setToastState({ msg: S.settings.exported });
   };
 
   const downloadBlob = (blob: Blob, name: string) => {
@@ -100,7 +104,7 @@ export default function App() {
     }
     const csv = "\uFEFF" + rows.join("\n");
     downloadBlob(new Blob([csv], { type: "text/csv;charset=utf-8" }), `gym-logs-${new Date().toISOString().slice(0, 10)}.csv`);
-    setToast(S.settings.csvExported);
+    setToastState({ msg: S.settings.csvExported });
   };
 
   /** B7: حذف سجل من التقدم */
@@ -109,20 +113,20 @@ export default function App() {
   const importFile = (file: File) => {    file.text()
       .then(json => {
         const bundle = parseBundle(json);
-        if (!bundle) { setToast(S.settings.importFailed); return; }
+        if (!bundle) { setToastState({ msg: S.settings.importFailed }); return; }
         const applied: string[] = [];
         if (bundle.profile) { setProfile(bundle.profile); applied.push("profile"); }
         if (bundle.plan) { setDays(bundle.plan); applied.push("plan"); }
         if (bundle.logs) { setLogs(bundle.logs); applied.push("logs"); }
-        setToast(applied.length ? S.settings.imported : S.settings.importEmpty);
+        setToastState({ msg: applied.length ? S.settings.imported : S.settings.importEmpty });
       })
-      .catch(() => setToast(S.settings.importFailed));
+      .catch(() => setToastState({ msg: S.settings.importFailed }));
   };
 
   const startSession = (dayId: string) => {
     const day = days.find(d => d.id === dayId);
     if (!day) return;
-    if (day.exercises.length === 0) { setToast(S.session.emptyDay); return; }
+    if (day.exercises.length === 0) { setToastState({ msg: S.session.emptyDay }); return; }
     api.start(day);
   };
 
@@ -154,7 +158,7 @@ export default function App() {
       : d));
 
     api.quit();
-    setToast(S.session.finished(fmtClock(elapsed)));
+    setToastState({ msg: S.session.finished(fmtClock(elapsed)) });
   };
 
   /** حفظ من الـ Onboarding: ملف الشخصي + خطة فاضية بعدد الأيام (سلوك الأصلي) */
@@ -171,12 +175,48 @@ export default function App() {
     setProfile({ ...profile, restSeconds: next });
   };
 
-  const toastEl = toast ? <div className="toast">{toast}</div> : null;
+  /** R2-4: تبديل وحدة الأوزان — تحويل كامل للوجز/الوزن/الهدف/الخطة/سجل الوزن (unitMigration) */
+  const changeUnits = (unit: "kg" | "lbs") => {
+    if (!profile || profile.weightUnit === unit) return;
+    const from = profile.weightUnit;
+    setLogs(l => convertLogsUnit(l, from, unit));
+    setBodyList(b => convertBodyUnit(b, from, unit));
+    setDays(d => convertPlanUnit(d, from, unit));
+    setProfile(p => p ? {
+      ...p,
+      weightUnit: unit,
+      weight: convertWeight(p.weight, from, unit),
+      targetWeight: convertWeight(p.targetWeight, from, unit),
+    } : p);
+    setToastState({ msg: S.settings.unitConverted });
+  };
+
+  /** R2-4: بيب نهاية الاستراحة (اختياري) */
+  const changeBeep = (v: boolean) => {
+    setProfile(p => p ? { ...p, restBeep: v } : p);
+  };
+
+  const toastEl = toastState ? (
+    <div className="toast">
+      <span>{toastState.msg}</span>
+      {toastState.undo && (
+        <button
+          className="toast-undo"
+          onClick={() => {
+            setToastState(null);
+            toastState.undo?.();
+          }}
+        >
+          ↩ {S.session.undo}
+        </button>
+      )}
+    </div>
+  ) : null;
   const themeModalEl = (
     <ThemeModal
       open={showTheme}
       theme={theme}
-      onPick={t => { setTheme(t); setShowTheme(false); setToast("اتغيّر الثيم ✨"); }}
+      onPick={t => { setTheme(t); setShowTheme(false); setToastState({ msg: "اتغيّر الثيم ✨" }); }}
       onClose={() => setShowTheme(false)}
     />
   );
@@ -189,6 +229,8 @@ export default function App() {
       onRestDelta={changeRest}
       onExportCsv={exportCsv}
       onOpenTheme={() => setShowTheme(true)}
+      onUnitChange={changeUnits}
+      onBeepToggle={changeBeep}
       onClose={() => setShowSettings(false)}
     />
   ) : null;

@@ -8,6 +8,7 @@ import { useState } from "react";
 import {
   CheckIcon,
   ChevronDown,
+  CopyIcon,
   EditIcon,
   MinusIcon,
   PaletteIcon,
@@ -34,7 +35,7 @@ interface HomeTabProps {
   setPlan: (next: WorkoutDay[]) => void;
   addLog: (entry: WorkoutLog) => void;
   startSession: (dayId: string) => void;
-  onToast: (msg: string) => void;
+  onToast: (msg: string, undo?: () => void) => void;
   onOpenTheme: () => void;
   onOpenSettings: () => void;
 }
@@ -47,6 +48,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({ days, profile, setPlan, addLog
   const [editSets, setEditSets] = useState(3);
   const [editReps, setEditReps] = useState(12);
   const [editWeight, setEditWeight] = useState(0);
+  const [editNote, setEditNote] = useState("");
   const [pickerDayId, setPickerDayId] = useState<string | null>(null);
   const [swapMode, setSwapMode] = useState(false);
   const [newDayLabel, setNewDayLabel] = useState("");
@@ -62,7 +64,10 @@ export const HomeTab: React.FC<HomeTabProps> = ({ days, profile, setPlan, addLog
   };
 
   const removeExercise = (dayId: string, exId: string) => {
+    const snapshot = days;
     setPlan(days.map(d => d.id === dayId ? { ...d, exercises: d.exercises.filter(e => e.id !== exId) } : d));
+    // R2-4: بلا confirm — شال فورًا + تراجع من التوست
+    onToast("اتشال من اليوم", () => setPlan(snapshot));
   };
 
   const saveExerciseEdit = () => {
@@ -76,7 +81,8 @@ export const HomeTab: React.FC<HomeTabProps> = ({ days, profile, setPlan, addLog
           ? { ...e,
               sets: clampN(editSets, setCap[0], setCap[1]),
               reps: clampN(editReps, repCap[0], repCap[1]),
-              weight: clampF(editWeight, wCap[0], wCap[1]) }
+              weight: clampF(editWeight, wCap[0], wCap[1]),
+              note: editNote.trim() ? editNote.trim() : undefined }
           : e) }
       : d));
     setEditingExercise(null);
@@ -89,9 +95,56 @@ export const HomeTab: React.FC<HomeTabProps> = ({ days, profile, setPlan, addLog
   };
 
   const removeDay = (dayId: string) => {
+    const snapshot = days;
     setPlan(days.filter(d => d.id !== dayId));
     if (expandedDay === dayId) setExpandedDay(null);
+    onToast("اليوم اتشال", () => setPlan(snapshot));
   };
+
+  /** R2-4: تكرار اليوم — نسخة جديدة بـ ids جديدة */
+  const duplicateDay = (dayId: string) => {
+    const src = days.find(d => d.id === dayId);
+    if (!src) return;
+    const copy: WorkoutDay = {
+      id: uid(),
+      label: `${src.label} (نسخة)`,
+      exercises: src.exercises.map(e => ({ ...e, id: uid() })),
+    };
+    setPlan([...days, copy]);
+    onToast("اتنسخ يوم جديد");
+  };
+
+  /** R2-4: إعادة ترتيب بالسحب (pointer events) — بالإضافة لأزرار ↑/↓ */
+  const reorderExercise = (dayId: string, from: number, to: number) => {
+    setPlan(days.map(d => {
+      if (d.id !== dayId || from === to) return d;
+      const arr = [...d.exercises];
+      const [moved] = arr.splice(from, 1);
+      arr.splice(to, 0, moved!);
+      return { ...d, exercises: arr };
+    }));
+  };
+
+  /** حالة السحب الجارية — pointer capture على المقبض نفسه */
+  const dragRef = React.useRef<{ dayId: string; from: number; to: number; y: number; h: number } | null>(null);
+  const exDragStart = (e: React.PointerEvent<HTMLElement>, dayId: string, index: number): void => {
+    if (e.button !== 0 && e.pointerType === "mouse") return;
+    e.preventDefault();
+    const h = (e.currentTarget.closest(".ex-row") as HTMLElement | null)?.getBoundingClientRect().height ?? 56;
+    dragRef.current = { dayId, from: index, to: index, y: e.clientY, h: Math.max(28, h) };
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* بعض البيئات بترفض */ }
+  };
+  const exDragMove = (e: React.PointerEvent<HTMLElement>): void => {
+    const d = dragRef.current;
+    if (!d) return;
+    const rows = Math.trunc((e.clientY - d.y) / d.h);
+    const target = Math.max(0, d.from + rows);
+    if (target !== d.to) {
+      reorderExercise(d.dayId, d.to, target);
+      d.to = target;
+    }
+  };
+  const exDragEnd = (): void => { dragRef.current = null; };
 
   const confirmRename = () => {
     if (!renamingDay || !renameValue.trim()) return;
@@ -128,7 +181,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({ days, profile, setPlan, addLog
   const finishDay = () => {
     if (!dayToFinish) return;
     const logged: LoggedExercise[] = dayToFinish.exercises.map(e => ({
-      name: e.name, muscle: e.muscle, sets: e.sets, reps: e.reps, weight: finishWeights[e.id] || 0,
+      name: e.name, muscle: e.muscle, sets: e.sets, reps: e.reps, weight: finishWeights[e.id] || 0, note: e.note,
     }));
     const volume = logged.reduce((s, e) => s + e.sets * e.reps * e.weight, 0);
     addLog({
@@ -202,6 +255,9 @@ export const HomeTab: React.FC<HomeTabProps> = ({ days, profile, setPlan, addLog
                     </div>
                   </div>
                   <div className="day-card-actions" onClick={e => e.stopPropagation()}>
+                    <button className="day-action-btn" onClick={() => duplicateDay(day.id)} title="تكرار اليوم">
+                      <CopyIcon size={14} />
+                    </button>
                     <button className="day-action-btn" onClick={() => { setRenamingDay(day.id); setRenameValue(day.label); }} title={S.home.rename}>
                       <EditIcon size={14} />
                     </button>
@@ -221,16 +277,25 @@ export const HomeTab: React.FC<HomeTabProps> = ({ days, profile, setPlan, addLog
                   {day.exercises.length === 0 ? (
                     <p className="day-empty">{S.home.addHere}</p>
                   ) : (
-                    <div className="ex-list">
+                    <div className="ex-list"
+                      onPointerMove={exDragMove}
+                      onPointerUp={exDragEnd}
+                      onPointerCancel={exDragEnd}
+                    >
                       {day.exercises.map((ex, i) => (
                         <div key={ex.id} className="ex-row" style={{ "--i": i } as React.CSSProperties}>
+                          <span
+                            className="ex-drag"
+                            title="اسحب للترتيب"
+                            onPointerDown={e => exDragStart(e, day.id, i)}
+                          />
                           <div className="ex-num">{i + 1}</div>
                           <ExerciseThumb name={ex.name} muscle={ex.muscle} />
                           <div className="ex-info">
-                            <p className="ex-name">{ex.name}</p>
+                            <p className="ex-name">{ex.name}{ex.note ? " 📝" : ""}</p>
                             <p className="ex-muscle">{ex.muscle}{ex.weight ? ` · ${ex.weight} ${unit}` : ""}</p>
                           </div>
-                          <div className="ex-sets">{ex.sets}×{ex.reps}</div>
+                          <div className="ex-sets num">{ex.sets}×{ex.reps}</div>
                           <div className="ex-row-actions">
                             <button className="ex-action" aria-label="تحريك لفوق" disabled={i === 0}
                               onClick={() => moveExercise(day.id, i, -1)}>
@@ -240,7 +305,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({ days, profile, setPlan, addLog
                               onClick={() => moveExercise(day.id, i, 1)}>
                               <ChevronDown size={13} />
                             </button>
-                            <button className="ex-action" onClick={() => { setEditingExercise({ dayId: day.id, ex }); setEditSets(ex.sets); setEditReps(ex.reps); setEditWeight(ex.weight || 0); }}>
+                            <button className="ex-action" onClick={() => { setEditingExercise({ dayId: day.id, ex }); setEditSets(ex.sets); setEditReps(ex.reps); setEditWeight(ex.weight || 0); setEditNote(ex.note ?? ""); }}>
                               <EditIcon size={14} />
                             </button>
                             <button className="ex-action ex-action-danger" onClick={() => removeExercise(day.id, ex.id)}>
@@ -328,6 +393,18 @@ export const HomeTab: React.FC<HomeTabProps> = ({ days, profile, setPlan, addLog
                 <span className="stepper-label">{editWeight}</span>
                 <button className="stepper-btn" onClick={() => setEditWeight(w => Math.min(500, Math.max(0, w) + 2.5))}><PlusIcon size={14} /></button>
               </div>
+            </div>
+
+            {/* R2-4: ملاحظة على التمرين */}
+            <div className="edit-field edit-field-wide">
+              <label className="ob-field-label">{S.session.note}</label>
+              <textarea
+                className="field-input edit-note-input"
+                value={editNote}
+                onChange={e => setEditNote(e.target.value)}
+                placeholder="مثلاً: النمر بيبقى ٢٠ — زوّد ٥ على كل مجموعة"
+                rows={2}
+              />
             </div>
 
             {/* B3: استبدال ببديل نفس العضلة */}

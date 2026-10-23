@@ -162,7 +162,7 @@ export function useWorkoutSession(restSeconds: number = DEFAULT_REST_SECONDS): W
     setSession(s => (s ? closeRestPure(s, at) : s));
   };
 
-  /** R2-4: مطاط الاستراحة ±15ث — مش بنفس الصفر (النقص بيقفلها لو وصلت ما dона) */
+  /** R2-4: مطاط الاستراحة ±15ث — النقص بيقفلها لو وصلت صفر */
   const extendRest = (deltaSec: number): void => {
     setSession(s => {
       if (!s || !s.restEndsAt) return s;

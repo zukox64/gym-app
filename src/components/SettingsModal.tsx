@@ -8,6 +8,7 @@ import { useRef } from "react";
 import { Modal, ModalHeader } from "./ui/Modal";
 import { ChevronDown, DownloadIcon, EditIcon, MinusIcon, PaletteIcon, PlusIcon, UploadIcon } from "./icons";
 import { REST_RANGE } from "../config";
+import { Segmented } from "./ui/primitives";
 import { S } from "../strings";
 import type { UserProfile } from "../types";
 
@@ -19,13 +20,17 @@ interface SettingsModalProps {
   onRestDelta: (delta: number) => void;
   onExportCsv: () => void;
   onOpenTheme: () => void;
+  /** R2-4: تبديل وحدة الأوزان — التحويل في App (unitMigration) */
+  onUnitChange: (u: "kg" | "lbs") => void;
+  /** R2-4: بيب نهاية الاستراحة */
+  onBeepToggle: (v: boolean) => void;
   onClose: () => void;
 }
 
 const settingsRow = "settings-row";
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
-  profile, onEditProfile, onExport, onImportFile, onRestDelta, onExportCsv, onOpenTheme, onClose,
+  profile, onEditProfile, onExport, onImportFile, onRestDelta, onExportCsv, onOpenTheme, onUnitChange, onBeepToggle, onClose,
 }) => {
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -74,6 +79,29 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <button className="stepper-btn stepper-btn-sm" onClick={() => onRestDelta(15)}
             disabled={(profile?.restSeconds ?? 90) >= REST_RANGE[1]}><PlusIcon size={12} /></button>
         </div>
+      </div>
+
+      {/* R2-4: وحدة الأوزان — التحويل الكامل في App */}
+      <div className="settings-rest">
+        <span className="settings-rest-label">{S.settings.units}</span>
+        <Segmented
+          ariaLabel={S.settings.units}
+          value={profile?.weightUnit ?? "kg"}
+          onChange={onUnitChange}
+          options={[{ value: "kg", label: "كيلو (kg)" }, { value: "lbs", label: "باوند (lbs)" }]}
+        />
+        <span className="settings-units-hint">{S.settings.unitsHint}</span>
+      </div>
+
+      {/* R2-4: بيب نهاية الاستراحة */}
+      <div className="settings-rest">
+        <span className="settings-rest-label">{S.settings.beep}</span>
+        <Segmented
+          ariaLabel={S.settings.beep}
+          value={profile?.restBeep ? "on" : "off"}
+          onChange={v => onBeepToggle(v === "on")}
+          options={[{ value: "on", label: S.settings.on }, { value: "off", label: S.settings.off }]}
+        />
       </div>
 
       <input

@@ -132,6 +132,13 @@ export const S = {
     note: "ملاحظة",
     quickPlus: (v: number) => `+${v}`,
     undo: "تراجع",
+    platesBtn: "الأطباق والإحماء",
+    platesTitle: "الأطباق والإحماء",
+    platesSub: (w: number, u: string, bar: number) => `${w} ${u} على بار ${bar} ${u}`,
+    perSide: "في كل جانب",
+    warmLabel: "سلم الإحماء",
+    residual: (r: number, u: string) => `فاضل ${r} ${u} مش متغطي بالأطباق المتاحة`,
+    close: "قفل",
   },
 
   /* ===== الإعدادات (A7) ===== */
@@ -148,6 +155,14 @@ export const S = {
     imported: "البيانات اترجعت ✅",
     importFailed: "الملف مش مفهوم — اتأكد إنه نسخة صح من التطبيق",
     importEmpty: "الملف مفيهوش بيانات مفهومة",
+    // R2-4
+    units: "وحدة الأوزان",
+    unitsHint: "كل بياناتك هتتقلب تلقائيًا (kg ↔ lbs)",
+    unitConverted: "الوحدة اتغيّرت وكل بياناتك اتحوّلت ✅",
+    heightUnits: "وحدة الطول",
+    beep: "صوت نهاية الاستراحة",
+    on: "شغال",
+    off: "صامت",
   },
 
   errorBoundary: {

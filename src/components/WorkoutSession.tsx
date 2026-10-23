@@ -10,9 +10,10 @@ import { ProgressRing } from "./ui/primitives";
 import { fmtClock } from "../lib/date";
 import { buzz } from "../lib/motion";
 import { restBeep } from "../lib/beep";
-import { beatsAnyPr, prTripleMap } from "../lib/training";
+import { beatsAnyPr, platesFor, prTripleMap, warmupRamp } from "../lib/training";
 import { overloadSessionsFromLogs, suggestOverload } from "../lib/overload";
 import { S } from "../strings";
+import { BottomSheet } from "./ui/primitives";
 import type { SessionItem, WorkoutLog } from "../types";
 import type { WorkoutSessionApi } from "../hooks/useWorkoutSession";
 
@@ -49,6 +50,9 @@ export const WorkoutSession: React.FC<SessionProps> = ({ api, unit, logs, beep, 
 
   /* PRs بحسابات الأبعاد الثلاثة */
   const prs = React.useMemo(() => prTripleMap(logs), [logs]);
+
+  /* حاسبة الأطباق والإحماء */
+  const [showPlates, setShowPlates] = React.useState(false);
 
   /* PR badge: آخر عدة مكتملة بتكسر رقم؟ (buzz مرة واحدة لكل انتصار) */
   const lastLogged = cur && cur.setsDone.length > 0 ? cur.setsDone[cur.setsDone.length - 1] : null;
@@ -141,6 +145,7 @@ export const WorkoutSession: React.FC<SessionProps> = ({ api, unit, logs, beep, 
             {prBeaten && (
               <span className="chip chip-brand pr-flash"><strong>{S.session.prBadge}</strong></span>
             )}
+            <button className="chip" onClick={() => setShowPlates(true)}>🏋 {S.session.platesBtn}</button>
           </div>
 
           <SetEditor
@@ -207,6 +212,15 @@ export const WorkoutSession: React.FC<SessionProps> = ({ api, unit, logs, beep, 
           <span>{S.session.finishBtn}</span>
         </button>
       </main>
+
+      {/* R2-4: حاسبة الأطباق والإحماء */}
+      <PlatesSheet
+        open={showPlates}
+        onClose={() => setShowPlates(false)}
+        unit={unit}
+        draftW={draftW}
+        onUseWorking={w => { setDraftW(w); setShowPlates(false); }}
+      />
     </div>
   );
 };
@@ -230,7 +244,53 @@ const RestPanel: React.FC<{
   </div>
 );
 
-/* ===== تسجيل العدة — steppers كبيرة بـ long-press repeat + shortcut chips ===== */
+/* ===== حاسبة الأطباق والإحماء (bottom sheet) ===== */const PlatesSheet: React.FC<{
+  open: boolean;
+  onClose: () => void;
+  unit: string;
+  draftW: number;
+  onUseWorking: (w: number) => void;
+}> = ({ open, onClose, unit, draftW, onUseWorking }) => {
+  const isLbs = unit === "lbs";
+  const bar = isLbs ? 45 : 20;
+  const target = isLbs ? Math.round(draftW) : draftW;
+  const plates = platesFor(target, isLbs ? "lbs" : "kg", bar);
+  const ramp = warmupRamp(target);
+  return (
+    <BottomSheet open={open} onClose={onClose} label={S.session.platesTitle}>
+      <div className="plates-sheet">
+        <h3 className="modal-title">{S.session.platesTitle}</h3>
+        <p className="modal-sub">{S.session.platesSub(target, unit, bar)}</p>
+        <div className="plates-side">
+          <span className="settings-rest-label">{S.session.perSide}</span>
+          <div className="plates-row">
+            {plates.perSide.map((p, i) => (
+              <span key={i} className="plate plate-big num" data-kg={p >= 20}>{p}</span>
+            ))}
+            {plates.perSide.length === 0 && <span className="chip">البار بس</span>}
+          </div>
+          {plates.residual > 0 && (
+            <p className="plates-residual">⚠️ {S.session.residual(plates.residual, unit)}</p>
+          )}
+        </div>
+        <div className="plates-side">
+          <span className="settings-rest-label">{S.session.warmLabel}</span>
+          <div className="warm-list">
+            {ramp.map(r => (
+              <button key={r.pct} className="warm-row" onClick={() => onUseWorking(r.w)}>
+                <span className="chip chip-brand num">{r.w} {unit}</span>
+                <span className="warm-reps num">×{r.reps}</span>
+                <span className="warm-pct">{Math.round(r.pct * 100)}%</span>
+                <span className="warm-use">{S.session.useSuggestion}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        <button className="btn btn-ghost btn-block" onClick={onClose}>{S.session.close}</button>
+      </div>
+    </BottomSheet>
+  );
+};
 
 interface HoldRepeat {
   down: (e: React.PointerEvent) => void;
@@ -260,6 +320,7 @@ const useHoldRepeat = (fn: () => void, delayMs = 420, rateMs = 60): HoldRepeat =
   return { down, stop };
 };
 
+/* ===== تسجيل العدة — steppers كبيرة بـ long-press repeat + shortcut chips ===== */
 const SetEditor: React.FC<{
   api: WorkoutSessionApi;
   unit: string;
