@@ -5,6 +5,7 @@
 import * as React from "react";
 import { navItems } from "./navItems";
 import { FEATURES } from "../config";
+import { withViewTransition } from "../lib/motion";
 import type { Page } from "../types";
 
 export const NavBar: React.FC<{ page: Page; onGo: (p: Page) => void }> = ({ page, onGo }) => (
@@ -13,7 +14,7 @@ export const NavBar: React.FC<{ page: Page; onGo: (p: Page) => void }> = ({ page
       {navItems
         .filter(item => FEATURES.ai || item.page !== "AI")
         .map(({ page: p, Icon }) => (
-          <button key={p} onClick={() => onGo(p)}
+          <button key={p} onClick={() => withViewTransition(() => onGo(p))}
             className={`nav-item ${page === p ? "nav-active" : "nav-inactive"}`}>
             <span className={`nav-icon-wrap ${page === p ? "nav-icon-active" : ""}`}><Icon size={20} /></span>
           </button>

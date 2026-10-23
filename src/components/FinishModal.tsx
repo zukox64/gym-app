@@ -5,6 +5,8 @@
 
 import * as React from "react";
 import { Modal, ModalHeader } from "./ui/Modal";
+import { celebrate } from "../lib/confetti";
+import { buzz } from "../lib/motion";
 import { MinusIcon, PlusIcon } from "./icons";
 import { ExerciseThumb } from "./ExerciseThumb";
 import type { WorkoutDay } from "../types";
@@ -44,7 +46,7 @@ export const FinishModal: React.FC<FinishModalProps> = ({ day, unit, weights, se
         <span>إجمالي الوزن المرفوع</span>
         <strong>{finishTotal > 0 ? finishTotal.toLocaleString() : 0} {unit}</strong>
       </div>
-      <button className="continue-btn finish-confirm" onClick={onConfirm}>سجّل التمرين</button>
+      <button className="continue-btn finish-confirm" onClick={() => { buzz(30); celebrate(); onConfirm(); }}>سجّل التمرين</button>
     </Modal>
   );
 };

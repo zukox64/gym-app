@@ -6,6 +6,7 @@ import * as React from "react";
 import { ExerciseThumb } from "./ExerciseThumb";
 import { CheckIcon, MinusIcon, PlusIcon, XIcon } from "./icons";
 import { fmtClock } from "../lib/date";
+import { buzz } from "../lib/motion";
 import type { WorkoutSessionApi } from "../hooks/useWorkoutSession";
 
 interface SessionProps {
@@ -78,7 +79,7 @@ export const WorkoutSession: React.FC<SessionProps> = ({ api, unit, onFinish }) 
             <button className="sess-btn-ghost" onClick={prev} disabled={session.currentIdx === 0}>
               <span>‹ الرجوع</span>
             </button>
-            <button className="sess-btn-set" onClick={markSet} disabled={cur.doneSets >= cur.sets}>
+            <button className="sess-btn-set set-pop-host" onClick={() => { buzz(10); markSet(); }} disabled={cur.doneSets >= cur.sets}>
               <CheckIcon size={16} />
               <span>عدّة تتمت</span>
             </button>
@@ -94,6 +95,7 @@ export const WorkoutSession: React.FC<SessionProps> = ({ api, unit, onFinish }) 
           <div className="sess-list">
             {session.items.map((it, i) => (
               <button key={it.id} className={`sess-row ${i === session.currentIdx ? "sess-row-now" : i < session.currentIdx ? "sess-row-done" : ""}`}
+                style={{ "--i": i } as React.CSSProperties}
                 onClick={() => jump(i)}>
                 <span className="sess-row-idx">{i < session.currentIdx ? "✓" : i + 1}</span>
                 <span className="sess-row-name">{it.name}</span>

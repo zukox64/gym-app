@@ -1250,3 +1250,55 @@ body { transition: background .3s ease; }
   .modal-sheet { inset-inline-start: 88px; width: min(32rem, calc(100vw - 88px)); margin-inline: auto; }
   .dash-main, .dash-header { max-width: 64rem; margin-inline: auto; }
 }
+
+/* ══════════════════════════════════════════════════════════
+   R2-3: الحركة — transform/opacity فقط، وكلها بتقف مع reduced-motion
+   ══════════════════════════════════════════════════════════ */
+
+/* View Transitions API — المسافات بين الشاشات (قليل من الـ cross-fade وسحب لمسي) */
+::view-transition-old(root) { animation: vt-out 180ms var(--ease-in-out) both; }
+::view-transition-new(root) { animation: vt-in 200ms var(--ease-out) both; }
+@keyframes vt-out { to { opacity: 0; transform: translateY(-6px); } }
+@keyframes vt-in { from { opacity: 0; transform: translateY(10px); } }
+
+/* Fallback (بدون API): دخول ناعم للـ الصفحة عند التبديل */
+.dash-main { animation: page-in var(--dur-slow) var(--ease-out) both; }
+@keyframes page-in { from { opacity: 0; transform: translateY(10px); } }
+
+/* عناصر القوائم تدخل متدرجة — بيساوي عبر --i المُعين على العنصر */
+.ex-row, .sess-row, .recent-row, .pr-row {
+  animation: row-in 320ms var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 40ms);
+}
+@keyframes row-in { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+
+/* ضغطة سبرنج — أزرار وبطاقات اليوم */
+.day-card { transition: transform var(--dur-fast) var(--ease-spring), box-shadow var(--dur-base) var(--ease-out); }
+.day-card:active { transform: scale(.985); }
+.day-card-open { box-shadow: var(--e-2); }
+
+/* ✅ عدّة تتمت: بوب + شيك مرسوم */
+.set-pop-host:active:not(:disabled) { animation: set-pop 220ms var(--ease-spring); }
+@keyframes set-pop { 40% { transform: scale(1.06); } }
+.set-check { stroke-dasharray: 22; stroke-dashoffset: 22; }
+.set-check-done { animation: set-check 240ms var(--ease-out) forwards; }
+@keyframes set-check { to { stroke-dashoffset: 0; } }
+
+/* Expand/collapse عبر grid-template-rows (سلس، بلا CLS سktop) */
+.day-card-body-wrap {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--dur-slow) var(--ease-in-out);
+}
+.day-card-body-wrap.open { grid-template-rows: 1fr; }
+.day-card-body-wrap > .day-card-body { overflow: hidden; min-height: 0; }
+
+/* SVG draw-in — الاستعمال في الرسوم (R2-5) */
+.chart-draw { stroke-dasharray: var(--len, 300); stroke-dashoffset: var(--len, 300); animation: chart-draw 800ms var(--ease-out) 120ms forwards; }
+@keyframes chart-draw { to { stroke-dashoffset: 0; } }
+.bar-grow { transform-origin: bottom; transform: scaleY(0); animation: bar-grow 560ms var(--ease-spring) forwards; animation-delay: calc(var(--i, 0) * 45ms); }
+@keyframes bar-grow { to { transform: scaleY(1); } }
+
+/* عدّة PR بادج نبض */
+.pr-flash { animation: pr-flash 900ms var(--ease-out) 1; border-color: var(--brand-line); }
+@keyframes pr-flash { 0% { box-shadow: 0 0 0 0 var(--brand-glow); } 60% { box-shadow: 0 0 0 10px transparent; } }

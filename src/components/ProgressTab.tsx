@@ -6,6 +6,7 @@ import * as React from "react";
 import { useMemo, useState } from "react";
 import { PaletteIcon, TrashIcon } from "./icons";
 import { EmptyState } from "./ui/primitives";
+import { useCountUp } from "../hooks/useCountUp";
 import { ExerciseThumb } from "./ExerciseThumb";
 import { fmtClock, fmtDate, monthLabel, monthMeta, todayKey } from "../lib/date";
 import { fmtVolume, unitOf } from "../lib/units";
@@ -85,11 +86,14 @@ export const ProgressTab: React.FC<ProgressTabProps> = ({ logs, profile, onDelet
       logged: loggedDates(month),
       streak: streak(logs),
       best: bestLog(month),
-      favorite: favoriteExercise(month),
-    };
+      favorite: favoriteExercise(month),    };
   }, [logs, calMonth]);
 
   const { month: monthLogs, volume, delta, buckets, logged, best, favorite } = stats;
+  /* R2-3: count-up للأرقام الكبيرة */
+  const volumeAnim = useCountUp(volume);
+  const sessionsAnim = useCountUp(monthLogs.length);
+  const streakAnim = useCountUp(stats.streak);
   const maxWeek = Math.max(1, ...buckets);
   const { firstDayOfWeek: firstDow, daysInMonth } = monthMeta(calMonth.y, calMonth.m);
 
@@ -126,7 +130,7 @@ export const ProgressTab: React.FC<ProgressTabProps> = ({ logs, profile, onDelet
         <div className="stat-grid">
           <div className="stat-card stat-hero">
             <p className="stat-label">إجمالي الوزن المرفوع</p>
-            <p className="stat-value">{fmtVolume(volume)}<span className="stat-unit">{unit}</span></p>
+            <p className="stat-value num">{fmtVolume(volumeAnim)}<span className="stat-unit">{unit}</span></p>
             <p className={`stat-hint ${delta === null ? "" : delta >= 0 ? "up" : "down"}`}>
               {delta === null
                 ? "أول شهر ليك — كمّل!"
@@ -137,12 +141,12 @@ export const ProgressTab: React.FC<ProgressTabProps> = ({ logs, profile, onDelet
           </div>
           <div className="stat-card">
             <p className="stat-label">تمارين خلصتها</p>
-            <p className="stat-value">{monthLogs.length}</p>
+            <p className="stat-value num">{sessionsAnim}</p>
             <p className="stat-hint">{monthLogs.length ? `متوسط ${fmtVolume(volume / monthLogs.length)} ${unit} للتمرين` : "لسه مفيش"}</p>
           </div>
           <div className="stat-card">
             <p className="stat-label">ستريك</p>
-            <p className="stat-value">{stats.streak}<span className="stat-unit">يوم</span></p>
+            <p className="stat-value num">{streakAnim}<span className="stat-unit">يوم</span></p>
             <p className="stat-hint">{stats.streak > 0 ? "كمّل كده 🔥" : "ابدأ سلسلة جديدة"}</p>
           </div>
           <div className="stat-card">
@@ -237,8 +241,8 @@ export const ProgressTab: React.FC<ProgressTabProps> = ({ logs, profile, onDelet
             <EmptyState kind="trophy" title={S.progress.prTitle} sub={S.progress.prEmpty} />
           ) : (
             <div className="pr-list">
-              {prList.map(([name, w]) => (
-                <div key={name} className="pr-row">
+              {prList.map(([name, w], i) => (
+                <div key={name} className="pr-row" style={{ "--i": i } as React.CSSProperties}>
                   <span className="pr-name">{name}</span>
                   <span className="pr-val">{w} <em>{unit}</em></span>
                 </div>
@@ -277,8 +281,8 @@ export const ProgressTab: React.FC<ProgressTabProps> = ({ logs, profile, onDelet
             <EmptyState kind="calendar" title={S.progress.emptyRecent} sub="افتح يوم من «تماريني» واضغط «خلصت التمرين» وبنوب عليه." />
           ) : (
             <div className="recent-list">
-              {logs.slice(0, 6).map(l => (
-                <div key={l.id} className="recent-row">
+              {logs.slice(0, 6).map((l, i) => (
+                <div key={l.id} className="recent-row" style={{ "--i": i } as React.CSSProperties}>
                   <ExerciseThumb name={l.exercises[0]?.name || ""} muscle={l.exercises[0]?.muscle || ""} size={34} />
                   <div className="recent-info">
                     <p className="ex-name">{l.dayLabel}</p>

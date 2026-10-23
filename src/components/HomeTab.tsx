@@ -212,14 +212,18 @@ export const HomeTab: React.FC<HomeTabProps> = ({ days, profile, setPlan, addLog
                 </button>
               )}
 
-              {isExpanded && (
+              <div
+                key={day.id + (isExpanded ? "-o" : "-c")}
+                className={`day-card-body-wrap ${isExpanded ? "open" : ""}`}
+                aria-hidden={!isExpanded}
+              >
                 <div className="day-card-body">
                   {day.exercises.length === 0 ? (
                     <p className="day-empty">{S.home.addHere}</p>
                   ) : (
                     <div className="ex-list">
                       {day.exercises.map((ex, i) => (
-                        <div key={ex.id} className="ex-row">
+                        <div key={ex.id} className="ex-row" style={{ "--i": i } as React.CSSProperties}>
                           <div className="ex-num">{i + 1}</div>
                           <ExerciseThumb name={ex.name} muscle={ex.muscle} />
                           <div className="ex-info">
@@ -263,7 +267,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({ days, profile, setPlan, addLog
                     </button>
                   )}
                 </div>
-              )}
+                </div>
             </div>
           );
         })}
