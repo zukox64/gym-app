@@ -24,6 +24,17 @@ import {
   weekBuckets,
   weekSummary,
 } from "../lib/stats";
+import {
+  areaPath,
+  est1rmSeries,
+  linePath,
+  monthVolumeSeries,
+  muscleVolumeMap,
+  type SeriesPoint,
+} from "../lib/charts";
+import { achievementCount, evaluateAchievements } from "../lib/achievements";
+import { drawMonthlyReport, shareOrDownload } from "../lib/reportCard";
+import { ProgressRing } from "./ui/primitives";
 import type { UserProfile, WorkoutLog } from "../types";
 import type { BodyWeightPoint } from "../lib/migrations";
 import { S } from "../strings";
@@ -60,6 +71,22 @@ export const ProgressTab: React.FC<ProgressTabProps> = ({ logs, profile, onDelet
     [logs, pickedEx],
   );
 
+  /* R2-5: الرسوم + الإنجازات + الهدف */
+  const volMonths = useMemo(() => monthVolumeSeries(logs, 6), [logs]);
+  const mVol = useMemo(() => muscleVolumeMap(logs), [logs]);
+  const muscleRows = useMemo(
+    () => Object.entries(mVol).sort((a, b) => b[1] - a[1]).filter(([, v]) => v > 0),
+    [mVol],
+  );
+  const muscleTop = muscleRows[0]?.[0] ?? "";
+  const oneRm = useMemo(() => (pickedEx ? est1rmSeries(logs, pickedEx) : []), [logs, pickedEx]);
+  const goal = useMemo(() => goalProgress(profile, body), [profile, body]);
+  const achViews = useMemo(
+    () => evaluateAchievements({ logs, plan: [], body, profile, todayIso: todayKey(), unit }),
+    [logs, body, profile, unit],
+  );
+  const achUnlocked = achievementCount(achViews);
+
   const saveBody = () => {
     const v = Number(bodyInput);
     if (!Number.isFinite(v) || v <= 0) return;
@@ -94,8 +121,27 @@ export const ProgressTab: React.FC<ProgressTabProps> = ({ logs, profile, onDelet
   const volumeAnim = useCountUp(volume);
   const sessionsAnim = useCountUp(monthLogs.length);
   const streakAnim = useCountUp(stats.streak);
-  const maxWeek = Math.max(1, ...buckets);
   const { firstDayOfWeek: firstDow, daysInMonth } = monthMeta(calMonth.y, calMonth.m);
+
+  /* R2-5: تقرير الشهر — يتبني canvas ويشارك/ينزل */
+  const [reportMsg, setReportMsg] = useState("");
+  const exportReport = () => {
+    const cv = document.createElement("canvas");
+    drawMonthlyReport(cv, {
+      monthLabel: monthLabel(calMonth.y, calMonth.m),
+      sessions: monthLogs.length,
+      volume,
+      unit,
+      streak: stats.streak,
+      prList: prList as [string, number][],
+      favorite,
+      bestDay: best ? fmtDate(best.date) : null,
+      userName: profile?.name ?? "",
+      topMuscle: muscleTop,
+    });
+    void shareOrDownload(cv, `gym-report-${calMonth.y}-${String(calMonth.m + 1).padStart(2, "0")}.png`)
+      .then(r => setReportMsg(r === "shared" ? S.progress.reportShared : r === "downloaded" ? S.progress.reportDone : S.progress.reportFailed));
+  };
 
   return (
     <>
@@ -193,21 +239,59 @@ export const ProgressTab: React.FC<ProgressTabProps> = ({ logs, profile, onDelet
 
         <div className="card bars-card">
           <div className="card-head-row">
-            <h3 className="card-title">الوزن على الأسابيع</h3>
+            <h3 className="card-title">{S.progress.weeksBarTitle}</h3>
             <span className="card-badge">{fmtVolume(volume)} {unit}</span>
           </div>
-          <div className="bars">
-            {buckets.map((v, i) => (
-              <div key={i} className="bar-col">
-                <span className="bar-val">{v > 0 ? fmtVolume(v) : ""}</span>
-                <div className="bar-track">
-                  <div className="bar-fill" style={{ height: v > 0 ? `${Math.max(6, Math.round((v / maxWeek) * 100))}%` : "0%" }} />
-                </div>
-                <span className="bar-label">أسبوع {i + 1}</span>
-              </div>
-            ))}
-          </div>
+          <SvgBars vals={buckets} labels={buckets.map((_, i) => S.progress.weeksOf(i + 1))} fmt={v => fmtVolume(v)} />
         </div>
+
+        {/* R2-5: حجم آخر 6 شهور — area chart */}
+        <div className="card">
+          <div className="card-head-row">
+            <h3 className="card-title">{S.progress.monthsAreaTitle}</h3>
+            <span className="card-badge">{fmtVolume(volMonths[volMonths.length - 1]?.v ?? 0)} {unit}</span>
+          </div>
+          <SvgArea pts={volMonths.map(p => ({ date: p.label, v: p.v }))} fmt={v => fmtVolume(v)} id="g-months" />
+        </div>
+
+        {/* R2-5: خريطة العضلات */}
+        {muscleRows.length > 0 && (
+          <div className="card">
+            <h3 className="card-title">{S.progress.heatmapTitle}</h3>
+            <p className="card-sub">{S.progress.heatmapSub(muscleTop)}</p>
+            <div className="heat-grid">
+              {muscleRows.map(([muscle, v]) => {
+                const max = muscleRows[0]![1] || 1;
+                return (
+                  <div key={muscle} className="heat-cell" style={{ "--vol": String(v / max) } as React.CSSProperties}>
+                    <span className="heat-muscle">{muscle}</span>
+                    <span className="heat-val num">{fmtVolume(v)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* R2-5: هدف الجسم — ring */}
+        {goal && (
+          <div className="card goal-card">
+            <h3 className="card-title">{S.progress.goalTitle}</h3>
+            <div className="goal-row">
+              <ProgressRing pct={goal.pct} size={108} stroke={10}>
+                <span className="goal-ring-num num">{fmtVolume(goal.pct * 100)}<em>%</em></span>
+              </ProgressRing>
+              <div className="goal-info">
+                <span className="goal-line"><em>{S.progress.goalStart}</em> {goal.start} {unit}</span>
+                <span className="goal-line"><em>{S.progress.goalNow}</em> {goal.cur} {unit}</span>
+                <span className="goal-line"><em>{S.progress.goalTarget}</em> {goal.target} {unit}</span>
+                <span className={`goal-diff ${goal.diff === 0 ? "reached" : ""} num`}>
+                  {goal.diff === 0 ? "🎯 وصلت!" : S.progress.goalRemaining(Math.abs(Math.round(goal.diff * 10) / 10))}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* B4: تقدم تمرين معيّن */}
         <div className="card">
@@ -220,6 +304,13 @@ export const ProgressTab: React.FC<ProgressTabProps> = ({ logs, profile, onDelet
           {history.length === 0 ? (
             <p className="day-empty">{S.progress.noSessions}</p>
           ) : (            <div className="ex-history-list">
+              {/* R2-5: 1RM التقديري — منحنى على جيب */}
+              {oneRm.length > 0 && (
+                <div className="one-rm-chart">
+                  <span className="card-sub">{S.progress.oneRmTitle}</span>
+                  <SvgArea pts={oneRm} fmt={v => `${Math.round(v)}`} unitLabel={unit} id="g-1rm" />
+                </div>
+              )}
               {history.map(h => (
                 <div key={h.date} className="ex-history-row">
                   <span className="ex-history-date">{fmtDate(h.date)}</span>
@@ -263,14 +354,23 @@ export const ProgressTab: React.FC<ProgressTabProps> = ({ logs, profile, onDelet
           {body.length === 0 ? (
             <EmptyState kind="scale" title={S.progress.bodyTitle} sub={S.progress.bodyEmpty} />
           ) : (
-            <div className="body-points">
-              {body.slice(0, 8).map(p => (
-                <div key={p.d} className="body-point-row">
-                  <span className="ex-history-date">{fmtDate(p.d)}</span>
-                  <span className="body-val">{p.v} {unit}</span>
+            <>
+              {/* R2-5: منحنى الاتجاه لو فيه نقطة ومية */}
+              {body.length >= 2 && (
+                <div className="body-trend">
+                  <SvgArea pts={[...body].reverse().map(p => ({ date: p.d, v: p.v }))} fmt={v => `${v}`} unitLabel={unit} id="g-body" />
                 </div>
-              ))}
-            </div>
+              )}
+              <p className="card-sub">{S.progress.bodyKeep}</p>
+              <div className="body-points">
+                {body.slice(0, 8).map(p => (
+                  <div key={p.d} className="body-point-row">
+                    <span className="ex-history-date">{fmtDate(p.d)}</span>
+                    <span className="body-val">{p.v} {unit}</span>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
 
@@ -302,7 +402,120 @@ export const ProgressTab: React.FC<ProgressTabProps> = ({ logs, profile, onDelet
             </div>
           )}
         </div>
+
+        {/* R2-5: كارت التقرير الشهري */}
+        <div className="card report-card">
+          <div className="card-head-row">
+            <h3 className="card-title">{S.progress.reportTitle}</h3>
+            <span className="card-badge">{monthLabel(calMonth.y, calMonth.m)}</span>
+          </div>
+          <p className="card-sub">{S.progress.reportSub}</p>
+          <button
+            className="btn-save report-btn"
+            onClick={exportReport}
+          >
+            📸 {S.progress.reportBtn}
+          </button>
+          {reportMsg && <p className="report-msg">{reportMsg}</p>}
+        </div>
+
+        {/* R2-5: رفّ الإنجازات */}
+        <div className="card ach-card">
+          <div className="card-head-row">
+            <h3 className="card-title">{S.progress.achTitle}</h3>
+            <span className="card-badge">{S.progress.achSub(achUnlocked, achViews.length)}</span>
+          </div>
+          <div className="ach-grid">
+            {achViews.map(v => (
+              <div key={v.ach.id} className={`ach-tile ${v.unlocked ? `ach-unlocked tier-${v.ach.tier}` : "ach-locked"}`}
+                title={v.ach.desc}>
+                <span className="ach-icon">{v.unlocked ? v.ach.icon : "🔒"}</span>
+                <span className="ach-name">{v.ach.title}</span>
+                <span className="ach-date">{v.unlocked && v.date ? fmtDate(v.date) : S.progress.achLocked}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </main>
     </>
   );
+};
+
+/* ══════════════ R2-5: مكوّنات الرسم (SVG بدل divs) + الهدف ══════════════ */
+
+/** أعمدة الحجم الأسبوعي — rect بيتنقل scaleY من تحت (بfallback مقائل لحركة reduce) */
+const SvgBars: React.FC<{ vals: readonly number[]; labels: readonly string[]; fmt: (v: number) => string }> = ({ vals, labels, fmt }) => {
+  const max = Math.max(1, ...vals);
+  const bw = 44, gap = 16, pad = 14, H = 158, labelY = H - 6;
+  const W = vals.length * bw + Math.max(0, vals.length - 1) * gap + pad * 2;
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="svg-bars" role="img">
+      {vals.map((v, i) => {
+        const bh = v > 0 ? Math.max(6, Math.round((v / max) * (H - 46))) : 0;
+        const x = pad + i * (bw + gap);
+        const y = H - 22 - bh;
+        return (
+          <g key={i} className="svgbar" style={{ "--i": i } as React.CSSProperties}>
+            <text x={x + bw / 2} y={y - 6} textAnchor="middle" className="svgbar-val num">{v > 0 ? fmt(v) : ""}</text>
+            <rect x={x} y={y} width={bw} height={Math.max(2, bh)} rx="7" className={`svgbar-fill ${v > 0 ? "" : "svgbar-zero"}`} />
+            <text x={x + bw / 2} y={labelY} textAnchor="middle" className="svgbar-label">{labels[i]}</text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+};
+
+/** منحنى area عام — للأشهر/الـ 1RM/وزن الجسم */
+const SvgArea: React.FC<{ pts: readonly SeriesPoint[]; fmt: (v: number) => string; unitLabel?: string; id: string }> = ({ pts, fmt, unitLabel = "", id }) => {
+  const W = 330, H = 150, pad = 12;
+  const line = linePath(pts, W, H, pad);
+  const area = areaPath(pts, W, H, pad);
+  const max = Math.max(1, ...pts.map(p => p.v));
+  const last = pts[pts.length - 1];
+  const lastX = pts.length === 1 ? W / 2 : W - pad;
+  const lastY = last ? H - pad - (last.v / max) * (H - pad * 2) : H / 2;
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="area-chart" role="img" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id={`${id}-grad`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="var(--brand)" stopOpacity=".35" />
+          <stop offset="100%" stopColor="var(--brand)" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      {area && <path d={area} fill={`url(#${id}-grad)`} className="area-fill" />}
+      {line && <path d={line} fill="none" stroke="var(--brand)" strokeWidth="2.5" strokeLinecap="round" />
+      }
+      {last && (
+        <g>
+          <circle cx={lastX} cy={lastY} r="4" className="area-dot" />
+          <text x={lastX - 4} y={Math.max(14, lastY - 10)} textAnchor="end" className="area-last num">
+            {fmt(last.v)}{unitLabel ? ` ${unitLabel}` : ""}
+          </text>
+        </g>
+      )}
+      {pts.length >= 2 && pts[0] && pts[pts.length - 1] && (
+        <g className="area-labels">
+          <text x={pad} y={H - 1} textAnchor="start" className="area-date">{pts[0]!.date}</text>
+          <text x={W - pad} y={H - 1} textAnchor="end" className="area-date">{pts[pts.length - 1]!.date}</text>
+        </g>
+      )}
+    </svg>
+  );
+};
+
+/** تقدم هدف الوزن — من أول قياس جسم لحد الهدف */
+const goalProgress = (
+  profile: UserProfile | null,
+  body: readonly BodyWeightPoint[],
+): { pct: number; start: number; cur: number; target: number; diff: number } | null => {
+  if (!profile || !profile.targetWeight) return null;
+  const target = profile.targetWeight;
+  const series = [...body].reverse();
+  const start = series[0]?.v ?? profile.weight ?? target;
+  const cur = series[series.length - 1]?.v ?? profile.weight ?? target;
+  const total = Math.abs(start - target);
+  const pct = total > 0 ? Math.max(0, Math.min(1, Math.abs(start - cur) / total)) : 1;
+  const diff = Math.round((cur - target) * 10) / 10;
+  return { pct, start, cur, target, diff };
 };

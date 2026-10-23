@@ -104,6 +104,30 @@ export const S = {
     // B7
     confirmDel: "متأكد؟ اضغط تاني",
     emptyRecent: "لسه مسجلتش تمرين",
+    // R2-4 حذف سجل مع تراجع
+    // R2-5
+    weeksBarTitle: "الوزن على الأسابيع",
+    monthsAreaTitle: "حجم آخر 6 شهور",
+    weeksOf: (i: number) => `أسبوع ${i}`,
+    heatmapTitle: "خريطة العضلات",
+    heatmapSub: (top: string) => `أكتر عضلة شغّالة: ${top}`,
+    achTitle: "إنجازاتك",
+    achSub: (u: number, t: number) => `${u} من ${t}`,
+    achLocked: "لسه مقفول",
+    reportTitle: "تقرير الشهر",
+    reportSub: "صورة جاهزة تشاركها بعيد المناسبات",
+    reportBtn: "اجمع التقرير",
+    reportDone: "📎 التقرير اتنزل — صورة جاهزة",
+    reportShared: "✅ التقرير اتشارك",
+    reportFailed: "المتصفح منع التنزيل — جرّب تاني",
+    goalTitle: "هدفك",
+    goalStart: "بداية الرحلة",
+    goalNow: "دلووقتي",
+    goalTarget: "الهدف",
+    goalRemaining: (d: number) => `▼ فاضل ${d} للهدف`,
+    oneRmTitle: "1RM التقديري",
+    bodyTrendTitle: "منحنى وزنك",
+    bodyKeep: "آخر القياسات",
   },
 
   session: {
